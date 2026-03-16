@@ -1,0 +1,606 @@
+openapi: "3.0.3"
+
+servers:
+  - url: "https://api.thermosense.com/v1"
+    description: "Serveur de production"
+  - url: "https://staging-api.thermosense.com/v1"
+    description: "Serveur de staging pour tests"
+
+info:
+  title: ThermoSense API
+  version: "0.1.0"
+  description: |
+    API de gestion de la plateforme ThermoSense —
+    supervision de capteurs et pilotage d'actionneurs pour le confort thermique des bâtiments.
+  contact:
+    name: "Support ThermoSense"
+    email: "coucou@test.com"
+ 
+tags:
+  - name: Areas
+    description: Opérations liées aux zones (areas) d'un bâtiment.
+  - name: Sensors
+    description: Opérations liées aux capteurs (sensors).
+  - name: AlertThreshold
+    description: Gestion des seuils d'alerte pour les zones/capteurs.
+  - name: Measures
+    description: Création et consultation des mesures (measures) des capteurs.
+  - name: Actuators
+    description: Gestion des actionneurs (actuators).
+  - name: Users
+    description: Gestion des utilisateurs (users).
+paths:
+  /areas:
+    post:
+      tags: [Areas]
+      operationId: createArea
+      summary: Créer une zone dans un bâtiment.
+      description: |
+        Créer une zone dans un bâtiment spécifique. La zone doit être associée à un 
+        bâtiment existant.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, name]
+              properties:
+                buildingId:
+                  type: string
+                  description: Identifiant du bâtiment
+                name:
+                  type: string
+                  description: Nom de la zone
+      responses:
+        "201":
+          description: Création de la zone avec succès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Areas"
+        "400":
+          description: Payload invalide (buildingId et/ou name manquant)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        
+  /sensors/{sensorId}:
+    get:
+      tags: [Sensors]
+      operationId: getSensor
+      summary: Obtenir le détail d'un capteur
+      description: |
+        Retourne les informations détaillées d'un capteur spécifique,
+        incluant son type et son statut opérationnel.
+        Utilisé par l'application mobile pour superviser un capteur précis.
+      parameters:
+        - name: sensorId
+          in: path
+          required: true
+          description: Identifiant unique du capteur.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Détail du capteur.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sensors"
+        "404":
+          description: Capteur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+
+
+  /areas/{areaId}/alert-thresholds:
+    get:
+      tags: [AlertThreshold]
+      operationId: listAlertThresholds
+      summary: Lister les seuils d'alerte d'une zone
+      description: |
+        Retourne les règles d'alerte configurées pour une zone donnée.
+      parameters:
+        - $ref: "#/components/parameters/areaId"
+      responses:
+        "200":
+          description: Liste des seuils configurés.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertThreshold"
+        "404":
+          description: Zone introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags: [AlertThreshold]
+      operationId: createAlertThreshold
+      summary: Créer un seuil d'alerte
+      description: |
+        Configure une nouvelle règle d'alerte pour une zone.
+        La règle déclenche une alerte si la condition est remplie pendant une durée donnée.
+      parameters:
+        - $ref: "#/components/parameters/areaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlertThreshold"
+      responses:
+        "201":
+          description: Seuil d'alerte créé.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertThreshold"
+        "404":
+          description: Zone introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+
+  /sensors/{sensorId}/measures:
+    get:
+      tags: [Measures]
+      operationId: listMeasurements
+      summary: Lister les mesures d'un capteur.
+      description: |
+            Retourne les mesures associées à un capteur donné.
+            Les résultats sont paginés pour limiter le volume de données transférées.
+      parameters:
+        - name: sensorId
+          in : path
+          required: true
+          description: Identifiant du capteur.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Nombre maximal de mesures retournées.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 499
+            default: 99
+        - name: offset
+          in: query
+          required: false
+          description: Position de départ pour la pagination.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Liste paginée de mesures.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Measures"
+        "404":
+          description: Capteur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [Measures]
+      operationId: createMeasurement
+      summary: Enregistrer une mesure provenant d'un capteur.
+      description: |
+        Reçoit une mesure et l'associe au capteur indiqué.
+      parameters:
+        - $ref: "#/components/parameters/sensorId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [timestamp, value]
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                value:
+                  type: number
+      responses:
+        "201":
+          description: Mesure créée.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Measures"
+        "400":
+          description: Payload invalide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /areas/{areaId}/actuators:
+    get:
+      tags: [Actuators]
+      operationId: listActuators
+      summary: Lister les actionneurs d'une zone
+      description: |
+        Retourne la liste des actionneurs associés à une zone donnée.
+        Utilisé pour afficher et gérer les actionneurs d'une zone.
+      parameters:
+        - $ref: "#/components/parameters/areaId"
+      responses:
+        "200":
+          description: Liste des actionneurs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Actuators"
+        "404":
+          description: Zone introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [Actuators]
+      operationId: createActuator
+      summary: Créer un actionneur dans une zone
+      description: |
+        Crée un nouvel actionneur et l'associe à la zone spécifiée.
+        Les détails de l'actionneur sont fournis dans le corps de la requête.
+      parameters:
+        - $ref: "#/components/parameters/areaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Actuators"
+      responses:
+        "201":
+          description: Actionneur créé.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Actuators"
+        "400":
+          description: Payload invalide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /actuators/{actuatorId}:
+    get:
+      tags: [Actuators]
+      operationId: getActuator
+      summary: Obtenir le détail d'un actionneur
+      description: Retourne les informations détaillées d'un actionneur donné.
+      parameters:
+        - $ref: "#/components/parameters/actuatorId"
+      responses:
+        "200":
+          description: Détail de l'actionneur.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Actuators"
+        "404":
+          description: Actionneur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      tags: [Actuators]
+      operationId: updateActuator
+      summary: Mettre à jour l'état d'un actionneur
+      description: |
+        Met à jour l'état ou les propriétés d'un actionneur existant.
+        Seules les propriétés fournies dans le corps seront modifiées.
+      parameters:
+        - $ref: "#/components/parameters/actuatorId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum: [on, off, auto]
+      responses:
+        "200":
+          description: Actionneur mis à jour.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Actuators"
+        "400":
+          description: Payload invalide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [Actuators]
+      operationId: deleteActuator
+      summary: Supprimer un actionneur
+      description: Supprime l'actionneur identifié par `actuatorId`.
+      parameters:
+        - $ref: "#/components/parameters/actuatorId"
+      responses:
+        "204":
+          description: Actionneur supprimé.
+        "404":
+          description: Actionneur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users:
+    post:
+      tags: [Users]
+      operationId: createUser
+      summary: Créer un utilisateur
+      description: Crée un nouvel utilisateur avec l'email et le nom fournis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Utilisateur créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+        "400":
+          description: Payload invalide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      operationId: getUser
+      summary: Obtenir le détail d'un utilisateur
+      description: Retourne les informations publiques d'un utilisateur identifié.
+      parameters:
+        - $ref: "#/components/parameters/userId"
+      responses:
+        "200":
+          description: Détail de l'utilisateur.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  name:
+                    type: string
+        "404":
+          description: Utilisateur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  
+components:           
+  parameters:
+    areaId:
+      name: areaId
+      in: path
+      required: true
+      description: "Identifiant unique de la zone."
+      schema:
+        type: string
+        format: uuid
+    sensorId:
+      name: sensorId
+      in: path
+      required: true
+      description: "Identifiant unique du capteur."
+      schema:
+        type: string
+        format: uuid
+    actuatorId:
+      name: actuatorId
+      in: path
+      required: true
+      description: "Identifiant unique de l'actionneur."
+      schema:
+        type: string
+        format: uuid
+    userId:
+      name: userId
+      in: path
+      required: true
+      description: "Identifiant unique de l'utilisateur."
+      schema:
+        type: string
+        format: uuid
+    
+  schemas:
+    
+    Areas:
+      type: object
+      description: "Représente une zone dans un bâtiment."
+      required:
+        - id
+        - name
+        - buildingId
+        - sensors
+      properties:
+        id:
+          type: string
+          description: "Identifiant unique de la zone."
+        name:
+          type: string
+          description: "Nom de la zone."
+        buildingId:
+          type: string
+          description: "Identifiant du bâtiment auquel la zone appartient."
+        sensors:
+          type: array
+          description: "Liste des capteurs présents dans la zone."
+          items:
+            $ref: "#/components/schemas/Sensors"
+    Sensors:
+      type: object
+      description: "Représente un capteur dans une zone."
+      required:  
+        - id
+        - type
+        - status
+        - areaId
+      properties:
+        id:
+          type: string
+          description: "Identifiant unique du capteur."
+        type:
+          type: string
+          description: "Type de capteur."
+        status:
+          type: string
+          description: "Statut du capteur (active, inactive, maintenance)."
+          enum: [active, inactive, maintenance]
+        areaId:
+          type: string
+          description: "Identifiant de la zone à laquelle le capteur appartient."
+    Actuators:
+      type: object
+      description: "Représente un actionneur dans une zone."
+      required:
+        - id
+        - type
+        - state
+        - areaId
+      properties:
+        id:
+          type: string
+          description: "Identifiant unique de l'actionneur."
+        type:
+          type: string
+          description: "Type d'actionneur."
+        state:
+          type: string
+          description: "État de l'actionneur (on, off, auto)."
+          enum: [on, off, auto]
+        areaId:
+          type: string
+          description: "Identifiant de la zone à laquelle l'actionneur appartient."
+    Measures:
+      type: object
+      description: "Représente une mesure prise par un capteur."
+      required:
+        - id
+        - sensorId
+        - timestamp
+        - value
+      properties:
+        id:
+          type: string
+          description: "Identifiant unique de la mesure."
+        sensorId:
+          type: string
+          description: "Identifiant du capteur qui a pris la mesure."
+        timestamp:
+          type: string
+          format: date-time
+          description: "Date et heure de la mesure."
+        value:
+          type: number
+          description: "Valeur de la mesure prise par le capteur."
+    AlertThreshold:
+      type: object
+      description: "Représente un seuil d'alerte pour un capteur."
+      required:
+        - id
+        - sensorId
+        - thresholdValue
+        - comparisonOperator
+      properties:
+        id:
+          type: string
+          description: "Identifiant unique du seuil d'alerte."
+        sensorId:
+          type: string
+          description: "Identifiant du capteur auquel le seuil d'alerte est associé."
+        thresholdValue:
+          type: number
+          description: "Valeur du seuil d'alerte."
+        comparisonOperator:
+          type: string
+          description: "Opérateur de comparaison pour le seuil d'alerte (greaterThan, lessThan, equalTo)."
+          enum: [greaterThan, lessThan, equalTo]
+    Error:
+      type: object
+      description: "Représente une erreur dans la plateforme ThermoSense."
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Code d'erreur machine-readable (ex "invalidParameter")
+        message:
+          type: string
+          description: Message d'erreur lisible pour le développeur
+        details:
+          type: array
+          description: Détails supplémentaires (erreurs de validation par champ)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              reason:
+                type: string
