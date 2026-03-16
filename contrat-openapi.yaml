@@ -433,7 +433,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
   
 components:           
   parameters:
@@ -471,7 +470,6 @@ components:
         format: uuid
     
   schemas:
-    
     Areas:
       type: object
       description: "Représente une zone dans un bâtiment."
