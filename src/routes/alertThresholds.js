@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
+const { authenticate } = require("../auth");
 
 const router = Router();
 
@@ -25,8 +26,8 @@ router.get("/:areaId/alert-thresholds", (req, res) => {
   res.json(thresholds);
 });
 
-// POST /areas/:areaId/alert-thresholds
-router.post("/:areaId/alert-thresholds", (req, res) => {
+// POST /areas/:areaId/alert-thresholds (protégé)
+router.post("/:areaId/alert-thresholds", authenticate, (req, res) => {
   const area = db.areas.find((a) => a.id === req.params.areaId);
   if (!area) {
     return res.status(404).json({

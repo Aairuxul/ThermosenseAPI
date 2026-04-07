@@ -1,11 +1,12 @@
 const { nextId, resetIds } = require("./id");
+const bcrypt = require("bcryptjs");
 
 function randomFloat(min, max, decimals = 2) {
   const val = Math.random() * (max - min) + min;
   return parseFloat(val.toFixed(decimals));
 }
 
-function generateSeed() {
+async function generateSeed() {
   resetIds();
 
   const buildingId = nextId("building");
@@ -116,7 +117,18 @@ function generateSeed() {
   ];
 
   // --- Utilisateurs (multi-rôles pour BOLA/BFLA en S4) ---
+  // Hash du password "root" pour le compte root
+  const rootPasswordHash = await bcrypt.hash("root", 10);
+
   const users = [
+    {
+      id: nextId("user"),
+      email: "root",
+      password: rootPasswordHash,
+      name: "Root Admin",
+      role: "admin",
+      zone: null,
+    },
     {
       id: nextId("user"),
       email: "admin@thermosense.com",

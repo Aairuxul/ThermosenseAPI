@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
+const { authenticate } = require("../auth");
 
 const router = Router();
 
@@ -24,8 +25,8 @@ router.get("/:sensorId/measures", (req, res) => {
   res.json({ data });
 });
 
-// POST /sensors/:sensorId/measures
-router.post("/:sensorId/measures", (req, res) => {
+// POST /sensors/:sensorId/measures (protégé)
+router.post("/:sensorId/measures", authenticate, (req, res) => {
   const sensor = db.sensors.find((s) => s.id === req.params.sensorId);
 
   if (!sensor) {

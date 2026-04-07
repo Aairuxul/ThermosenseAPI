@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
+const { authenticate } = require("../auth");
 
 const router = Router();
 
@@ -9,8 +10,8 @@ router.get("/", (req, res) => {
   res.json({ data: db.areas });
 });
 
-// POST /areas
-router.post("/", (req, res) => {
+// POST /areas (protégé)
+router.post("/", authenticate, (req, res) => {
   const { buildingId, name } = req.body;
   const details = [];
 

@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
+const { authenticate } = require("../auth");
 
 const areaActuatorsRouter = Router();
 const actuatorsRouter = Router();
@@ -19,8 +20,8 @@ areaActuatorsRouter.get("/:areaId/actuators", (req, res) => {
   res.json({ data });
 });
 
-// POST /areas/:areaId/actuators
-areaActuatorsRouter.post("/:areaId/actuators", (req, res) => {
+// POST /areas/:areaId/actuators (protégé)
+areaActuatorsRouter.post("/:areaId/actuators", authenticate, (req, res) => {
   const area = db.areas.find((a) => a.id === req.params.areaId);
   if (!area) {
     return res.status(404).json({
@@ -74,8 +75,8 @@ actuatorsRouter.get("/:actuatorId", (req, res) => {
   res.json(actuator);
 });
 
-// PUT /actuators/:actuatorId
-actuatorsRouter.put("/:actuatorId", (req, res) => {
+// PUT /actuators/:actuatorId (protégé)
+actuatorsRouter.put("/:actuatorId", authenticate, (req, res) => {
   const actuator = db.actuators.find((a) => a.id === req.params.actuatorId);
   if (!actuator) {
     return res.status(404).json({
@@ -96,8 +97,8 @@ actuatorsRouter.put("/:actuatorId", (req, res) => {
   res.json(actuator);
 });
 
-// DELETE /actuators/:actuatorId
-actuatorsRouter.delete("/:actuatorId", (req, res) => {
+// DELETE /actuators/:actuatorId (protégé)
+actuatorsRouter.delete("/:actuatorId", authenticate, (req, res) => {
   const idx = db.actuators.findIndex((a) => a.id === req.params.actuatorId);
   if (idx === -1) {
     return res.status(404).json({

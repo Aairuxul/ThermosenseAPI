@@ -1,10 +1,12 @@
 openapi: "3.0.3"
 
 servers:
-  - url: "https://api.thermosense.com/v1"
-    description: "Serveur de production"
+  - url: "http://localhost:3000"
+    description: "Serveur de développement local"
   - url: "https://staging-api.thermosense.com/v1"
     description: "Serveur de staging pour tests"
+  - url: "https://api.thermosense.com/v1"
+    description: "Serveur de production"
 
 info:
   title: ThermoSense API
@@ -17,6 +19,10 @@ info:
     email: "coucou@test.com"
  
 tags:
+  - name: System
+    description: Endpoints système pour le monitoring et la santé de l'API.
+  - name: Auth
+    description: Authentification et gestion des tokens JWT.
   - name: Areas
     description: Opérations liées aux zones (areas) d'un bâtiment.
   - name: Sensors
@@ -29,7 +35,96 @@ tags:
     description: Gestion des actionneurs (actuators).
   - name: Users
     description: Gestion des utilisateurs (users).
+
 paths:
+  /health:
+    get:
+      tags: [System]
+      operationId: healthCheck
+      summary: Vérifier l'état de l'API
+      description: |
+        Endpoint de santé pour vérifier que l'API fonctionne correctement.
+        Utile pour le debugging et le monitoring.
+      responses:
+        "200":
+          description: API opérationnelle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  message:
+                    type: string
+                    example: API is running
+                  database:
+                    type: string
+                    example: initialized
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Se connecter et obtenir un token JWT
+      description: |
+        Authentifie un utilisateur avec son email et mot de passe.
+        Retourne un token JWT à utiliser pour les requêtes authentifiées.
+        
+        **Compte de test:**
+        - Email: `root`
+        - Password: `root`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: root
+                password:
+                  type: string
+                  format: password
+                  example: root
+      responses:
+        "200":
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Token JWT à utiliser dans l'en-tête Authorization
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      name:
+                        type: string
+                      role:
+                        type: string
+        "400":
+          description: Payload invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Email ou mot de passe incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /areas:
     get:
       tags: [Areas]
@@ -57,6 +152,9 @@ paths:
       description: |
         Créer une zone dans un bâtiment spécifique. La zone doit être associée à un 
         bâtiment existant.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -149,6 +247,9 @@ paths:
       description: |
         Configure une nouvelle règle d'alerte pour une zone.
         La règle déclenche une alerte si la condition est remplie pendant une durée donnée.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/areaId"
       requestBody:
@@ -229,6 +330,9 @@ paths:
       summary: Enregistrer une mesure provenant d'un capteur.
       description: |
         Reçoit une mesure et l'associe au capteur indiqué.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/sensorId"
       requestBody:
@@ -300,6 +404,9 @@ paths:
       description: |
         Crée un nouvel actionneur et l'associe à la zone spécifiée.
         Les détails de l'actionneur sont fournis dans le corps de la requête.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/areaId"
       requestBody:
@@ -350,6 +457,9 @@ paths:
       description: |
         Met à jour l'état ou les propriétés d'un actionneur existant.
         Seules les propriétés fournies dans le corps seront modifiées.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/actuatorId"
       requestBody:
@@ -379,7 +489,11 @@ paths:
       tags: [Actuators]
       operationId: deleteActuator
       summary: Supprimer un actionneur
-      description: Supprime l'actionneur identifié par `actuatorId`.
+      description: |
+        Supprime l'actionneur identifié par `actuatorId`.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/actuatorId"
       responses:
@@ -397,7 +511,11 @@ paths:
       tags: [Users]
       operationId: createUser
       summary: Créer un utilisateur
-      description: Crée un nouvel utilisateur avec l'email et le nom fournis.
+      description: |
+        Crée un nouvel utilisateur avec l'email et le nom fournis.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -623,3 +741,18 @@ components:
                 type: string
               reason:
                 type: string
+  
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Authentification JWT. Utilisez le token obtenu via `/auth/login`.
+        
+        **Pour tester:**
+        1. Appelez POST `/auth/login` avec `{"email": "root", "password": "root"}`
+        2. Copiez le token retourné
+        3. Cliquez sur le bouton "Authorize" 🔒 en haut
+        4. Entrez le token (sans le préfixe "Bearer")
+        5. Toutes vos requêtes utiliseront automatiquement ce token !

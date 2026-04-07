@@ -1,11 +1,13 @@
 const { Router } = require("express");
+const bcrypt = require("bcryptjs");
 const db = require("../store");
 const { nextId } = require("../id");
+const { authenticate } = require("../auth");
 
 const router = Router();
 
-// POST /users
-router.post("/", (req, res) => {
+// POST /users (protégé)
+router.post("/", authenticate, async (req, res) => {
   const { email, name } = req.body;
   const details = [];
 
