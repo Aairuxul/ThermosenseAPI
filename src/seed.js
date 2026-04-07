@@ -155,14 +155,14 @@ async function generateSeed() {
       email: "device.sensor@thermosense.com",
       name: "Device Sensor 01",
       role: "device",
-      zone: null,
+      zone: areaAId,
     },
     {
       id: nextId("user"),
       email: "device.actuator@thermosense.com",
       name: "Device Actuator 01",
       role: "device",
-      zone: null,
+      zone: areaBId,
     },
   ];
 

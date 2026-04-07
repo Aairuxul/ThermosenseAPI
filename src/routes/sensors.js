@@ -1,20 +1,18 @@
 const { Router } = require("express");
-const db = require("../store");
+const { authenticate } = require("../auth");
+const { requireScope, requireSensorAccess } = require("../authorization");
 
 const router = Router();
 
 // GET /sensors/:sensorId
-router.get("/:sensorId", (req, res) => {
-  const sensor = db.sensors.find((s) => s.id === req.params.sensorId);
-
-  if (!sensor) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Capteur '${req.params.sensorId}' introuvable`,
-    });
+router.get(
+  "/:sensorId",
+  authenticate,
+  requireScope("sensors:read"),
+  requireSensorAccess,
+  (req, res) => {
+    res.json(req.sensor);
   }
-
-  res.json(sensor);
-});
+);
 
 module.exports = router;

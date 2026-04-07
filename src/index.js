@@ -57,7 +57,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
 app.use("/auth", authRouter);
 
 // --- Routes protégées ---
-// Note: Les routes GET restent publiques, POST/PUT/DELETE nécessitent l'authentification
+// BOLA/BFLA appliqués via middleware d'authentification et d'autorisation par ressource
 app.use("/areas", areasRouter);
 app.use("/sensors", sensorsRouter);
 app.use("/sensors", measuresRouter);

@@ -2,19 +2,12 @@ const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
+const { requireScope, requireSensorAccess } = require("../authorization");
 
 const router = Router();
 
 // GET /sensors/:sensorId/measures
-router.get("/:sensorId/measures", (req, res) => {
-  const sensor = db.sensors.find((s) => s.id === req.params.sensorId);
-  if (!sensor) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Capteur '${req.params.sensorId}' introuvable`,
-    });
-  }
-
+router.get("/:sensorId/measures", authenticate, requireScope("measures:read"), requireSensorAccess, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 99, 499);
   const offset = parseInt(req.query.offset) || 0;
 
@@ -26,15 +19,8 @@ router.get("/:sensorId/measures", (req, res) => {
 });
 
 // POST /sensors/:sensorId/measures (protégé)
-router.post("/:sensorId/measures", authenticate, (req, res) => {
-  const sensor = db.sensors.find((s) => s.id === req.params.sensorId);
-
-  if (!sensor) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Capteur '${req.params.sensorId}' introuvable`,
-    });
-  }
+router.post("/:sensorId/measures", authenticate, requireScope("measures:write"), requireSensorAccess, (req, res) => {
+  const sensor = req.sensor;
 
   if (sensor.status === "inactive") {
     return res.status(409).json({

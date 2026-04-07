@@ -2,33 +2,23 @@ const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
+const {
+  requireScope,
+  requireAreaAccess,
+  requireActuatorAccess,
+} = require("../authorization");
 
 const areaActuatorsRouter = Router();
 const actuatorsRouter = Router();
 
 // GET /areas/:areaId/actuators
-areaActuatorsRouter.get("/:areaId/actuators", (req, res) => {
-  const area = db.areas.find((a) => a.id === req.params.areaId);
-  if (!area) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Zone '${req.params.areaId}' introuvable`,
-    });
-  }
-
+areaActuatorsRouter.get("/:areaId/actuators", authenticate, requireScope("actuators:read"), requireAreaAccess, (req, res) => {
   const data = db.actuators.filter((a) => a.areaId === req.params.areaId);
   res.json({ data });
 });
 
 // POST /areas/:areaId/actuators (protégé)
-areaActuatorsRouter.post("/:areaId/actuators", authenticate, (req, res) => {
-  const area = db.areas.find((a) => a.id === req.params.areaId);
-  if (!area) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Zone '${req.params.areaId}' introuvable`,
-    });
-  }
+areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actuators:write"), requireAreaAccess, (req, res) => {
 
   const { type, state } = req.body;
   const details = [];
@@ -63,27 +53,13 @@ areaActuatorsRouter.post("/:areaId/actuators", authenticate, (req, res) => {
 });
 
 // GET /actuators/:actuatorId
-actuatorsRouter.get("/:actuatorId", (req, res) => {
-  const actuator = db.actuators.find((a) => a.id === req.params.actuatorId);
-  if (!actuator) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Actionneur '${req.params.actuatorId}' introuvable`,
-    });
-  }
-
-  res.json(actuator);
+actuatorsRouter.get("/:actuatorId", authenticate, requireScope("actuators:read"), requireActuatorAccess, (req, res) => {
+  res.json(req.actuator);
 });
 
 // PUT /actuators/:actuatorId (protégé)
-actuatorsRouter.put("/:actuatorId", authenticate, (req, res) => {
-  const actuator = db.actuators.find((a) => a.id === req.params.actuatorId);
-  if (!actuator) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Actionneur '${req.params.actuatorId}' introuvable`,
-    });
-  }
+actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"), requireActuatorAccess, (req, res) => {
+  const actuator = req.actuator;
 
   const { state } = req.body;
   if (!state || !["on", "off", "auto"].includes(state)) {
@@ -98,15 +74,8 @@ actuatorsRouter.put("/:actuatorId", authenticate, (req, res) => {
 });
 
 // DELETE /actuators/:actuatorId (protégé)
-actuatorsRouter.delete("/:actuatorId", authenticate, (req, res) => {
+actuatorsRouter.delete("/:actuatorId", authenticate, requireScope("actuators:write"), requireActuatorAccess, (req, res) => {
   const idx = db.actuators.findIndex((a) => a.id === req.params.actuatorId);
-  if (idx === -1) {
-    return res.status(404).json({
-      code: "notFound",
-      message: `Actionneur '${req.params.actuatorId}' introuvable`,
-    });
-  }
-
   db.actuators.splice(idx, 1);
   res.status(204).send();
 });
