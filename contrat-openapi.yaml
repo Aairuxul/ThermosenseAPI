@@ -468,7 +468,6 @@ components:
       description: "Identifiant unique de la zone."
       schema:
         type: string
-        format: uuid
     sensorId:
       name: sensorId
       in: path
@@ -476,7 +475,6 @@ components:
       description: "Identifiant unique du capteur."
       schema:
         type: string
-        format: uuid
     actuatorId:
       name: actuatorId
       in: path
@@ -484,7 +482,6 @@ components:
       description: "Identifiant unique de l'actionneur."
       schema:
         type: string
-        format: uuid
     userId:
       name: userId
       in: path
@@ -492,7 +489,6 @@ components:
       description: "Identifiant unique de l'utilisateur."
       schema:
         type: string
-        format: uuid
     
   schemas:
     Areas:

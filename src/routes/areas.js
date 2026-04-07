@@ -1,6 +1,6 @@
 const { Router } = require("express");
-const { v4: uuidv4 } = require("uuid");
 const db = require("../store");
+const { nextId } = require("../id");
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.post("/", (req, res) => {
     });
   }
 
-  const area = { id: uuidv4(), name, buildingId, sensors: [] };
+  const area = { id: nextId("area"), name, buildingId, sensors: [] };
   db.areas.push(area);
   res.status(201).json(area);
 });

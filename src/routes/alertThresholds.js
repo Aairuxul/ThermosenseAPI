@@ -1,6 +1,6 @@
 const { Router } = require("express");
-const { v4: uuidv4 } = require("uuid");
 const db = require("../store");
+const { nextId } = require("../id");
 
 const router = Router();
 
@@ -83,7 +83,7 @@ router.post("/:areaId/alert-thresholds", (req, res) => {
   }
 
   const threshold = {
-    id: uuidv4(),
+    id: nextId("threshold"),
     sensorId,
     thresholdValue,
     comparisonOperator,

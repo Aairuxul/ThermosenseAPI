@@ -21,7 +21,6 @@
   "homepage": "https://github.com/Aairuxul/ThermosenseAPI#readme",
   "dependencies": {
     "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "uuid": "^13.0.0"
+    "express": "^5.2.1"
   }
 }

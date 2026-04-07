@@ -1,6 +1,6 @@
 const { Router } = require("express");
-const { v4: uuidv4 } = require("uuid");
 const db = require("../store");
+const { nextId } = require("../id");
 
 const router = Router();
 
@@ -61,7 +61,7 @@ router.post("/:sensorId/measures", (req, res) => {
   }
 
   const measure = {
-    id: uuidv4(),
+    id: nextId("measure"),
     sensorId: sensor.id,
     timestamp,
     value,

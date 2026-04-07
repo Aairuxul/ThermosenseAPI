@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require("uuid");
+const { nextId, resetIds } = require("./id");
 
 function randomFloat(min, max, decimals = 2) {
   const val = Math.random() * (max - min) + min;
@@ -6,11 +6,13 @@ function randomFloat(min, max, decimals = 2) {
 }
 
 function generateSeed() {
-  const buildingId = uuidv4();
+  resetIds();
+
+  const buildingId = nextId("building");
 
   // --- Zones ---
-  const areaAId = uuidv4();
-  const areaBId = uuidv4();
+  const areaAId = nextId("area");
+  const areaBId = nextId("area");
 
   const areas = [
     {
@@ -30,14 +32,14 @@ function generateSeed() {
   // --- Capteurs ---
   const sensors = [
     // Zone A : 4 capteurs dont 1 inactive
-    { id: uuidv4(), type: "temperature", status: "active", areaId: areaAId },
-    { id: uuidv4(), type: "temperature", status: "active", areaId: areaAId },
-    { id: uuidv4(), type: "humidity", status: "active", areaId: areaAId },
-    { id: uuidv4(), type: "temperature", status: "inactive", areaId: areaAId },
+    { id: nextId("sensor"), type: "temperature", status: "active", areaId: areaAId },
+    { id: nextId("sensor"), type: "temperature", status: "active", areaId: areaAId },
+    { id: nextId("sensor"), type: "humidity", status: "active", areaId: areaAId },
+    { id: nextId("sensor"), type: "temperature", status: "inactive", areaId: areaAId },
     // Zone B : 3 capteurs
-    { id: uuidv4(), type: "temperature", status: "active", areaId: areaBId },
-    { id: uuidv4(), type: "humidity", status: "active", areaId: areaBId },
-    { id: uuidv4(), type: "temperature", status: "active", areaId: areaBId },
+    { id: nextId("sensor"), type: "temperature", status: "active", areaId: areaBId },
+    { id: nextId("sensor"), type: "humidity", status: "active", areaId: areaBId },
+    { id: nextId("sensor"), type: "temperature", status: "active", areaId: areaBId },
   ];
 
   // Remplir les sensors dans les areas
@@ -47,11 +49,11 @@ function generateSeed() {
   // --- Actionneurs ---
   const actuators = [
     // Zone A : 2 actionneurs
-    { id: uuidv4(), type: "heater", state: "on", areaId: areaAId },
-    { id: uuidv4(), type: "ventilation", state: "auto", areaId: areaAId },
+    { id: nextId("actuator"), type: "heater", state: "on", areaId: areaAId },
+    { id: nextId("actuator"), type: "ventilation", state: "auto", areaId: areaAId },
     // Zone B : 2 actionneurs (dont 1 off = maintenance)
-    { id: uuidv4(), type: "heater", state: "auto", areaId: areaBId },
-    { id: uuidv4(), type: "ventilation", state: "off", areaId: areaBId },
+    { id: nextId("actuator"), type: "heater", state: "auto", areaId: areaBId },
+    { id: nextId("actuator"), type: "ventilation", state: "off", areaId: areaBId },
   ];
 
   // --- Mesures (28 sur les dernières 24h) ---
@@ -81,7 +83,7 @@ function generateSeed() {
     }
 
     measures.push({
-      id: uuidv4(),
+      id: nextId("measure"),
       sensorId: sensor.id,
       timestamp,
       value,
@@ -94,19 +96,19 @@ function generateSeed() {
   // --- Seuils d'alerte ---
   const alertThresholds = [
     {
-      id: uuidv4(),
+      id: nextId("threshold"),
       sensorId: sensors[0].id,
       thresholdValue: 30.0,
       comparisonOperator: "greaterThan",
     },
     {
-      id: uuidv4(),
+      id: nextId("threshold"),
       sensorId: sensors[0].id,
       thresholdValue: 10.0,
       comparisonOperator: "lessThan",
     },
     {
-      id: uuidv4(),
+      id: nextId("threshold"),
       sensorId: sensors[4].id,
       thresholdValue: 28.0,
       comparisonOperator: "greaterThan",
@@ -116,35 +118,35 @@ function generateSeed() {
   // --- Utilisateurs (multi-rôles pour BOLA/BFLA en S4) ---
   const users = [
     {
-      id: uuidv4(),
+      id: nextId("user"),
       email: "admin@thermosense.com",
       name: "Alice Admin",
       role: "admin",
       zone: null,
     },
     {
-      id: uuidv4(),
+      id: nextId("user"),
       email: "operator.a@thermosense.com",
       name: "Bob Opérateur",
       role: "operator",
       zone: areaAId,
     },
     {
-      id: uuidv4(),
+      id: nextId("user"),
       email: "operator.b@thermosense.com",
       name: "Claire Opératrice",
       role: "operator",
       zone: areaBId,
     },
     {
-      id: uuidv4(),
+      id: nextId("user"),
       email: "device.sensor@thermosense.com",
       name: "Device Sensor 01",
       role: "device",
       zone: null,
     },
     {
-      id: uuidv4(),
+      id: nextId("user"),
       email: "device.actuator@thermosense.com",
       name: "Device Actuator 01",
       role: "device",

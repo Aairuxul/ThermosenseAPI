@@ -1,6 +1,6 @@
 const { Router } = require("express");
-const { v4: uuidv4 } = require("uuid");
 const db = require("../store");
+const { nextId } = require("../id");
 
 const router = Router();
 
@@ -24,7 +24,7 @@ router.post("/", (req, res) => {
     });
   }
 
-  const user = { id: uuidv4(), email, name, role: "operator", zone: null };
+  const user = { id: nextId("user"), email, name, role: "operator", zone: null };
   db.users.push(user);
 
   res.status(201).json({ id: user.id, email: user.email });

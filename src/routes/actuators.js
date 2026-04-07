@@ -1,6 +1,6 @@
 const { Router } = require("express");
-const { v4: uuidv4 } = require("uuid");
 const db = require("../store");
+const { nextId } = require("../id");
 
 const areaActuatorsRouter = Router();
 const actuatorsRouter = Router();
@@ -51,7 +51,7 @@ areaActuatorsRouter.post("/:areaId/actuators", (req, res) => {
   }
 
   const actuator = {
-    id: uuidv4(),
+    id: nextId("actuator"),
     type,
     state,
     areaId: req.params.areaId,

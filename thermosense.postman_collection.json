@@ -214,9 +214,42 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/sensors/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/sensors/sensor-999",
               "host": ["{{baseUrl}}"],
-              "path": ["sensors", "00000000-0000-0000-0000-000000000000"]
+              "path": ["sensors", "sensor-999"]
+            }
+          }
+        },
+        {
+          "name": "POST /sensors/:id/measures — Nouvelle mesure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Mesure créée avec id et sensorId', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('sensorId');",
+                  "  pm.expect(body).to.have.property('value');",
+                  "  pm.expect(body).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-03-17T10:30:00Z\",\n  \"value\": 21.3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}/measures",
+              "host": ["{{baseUrl}}"],
+              "path": ["sensors", "{{sensorActiveId}}", "measures"]
             }
           }
         }
@@ -754,9 +787,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/users/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/users/user-999",
               "host": ["{{baseUrl}}"],
-              "path": ["users", "00000000-0000-0000-0000-000000000000"]
+              "path": ["users", "user-999"]
             }
           }
         }
