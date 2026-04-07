@@ -1,0 +1,1570 @@
+{
+  "info": {
+    "_postman_id": "9c15e382-f41d-40ef-a5d6-03e8a3e7c1a7",
+    "name": "ThermosenseAPI",
+    "description": "Tests de l'API Thermosense. Lancer `npm run dev`, puis exécuter 0 — Auth JWT, ensuite 1 — Bootstrap, puis le reste des requêtes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "42775610"
+  },
+  "item": [
+    {
+      "name": "0 — Auth JWT",
+      "item": [
+        {
+          "name": "POST /auth/login — Succès (root/root)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Retourne token et user', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('token');",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body.user).to.have.property('id');",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('jwtToken', body.token);",
+                  "pm.collectionVariables.set('userId', body.user.id);",
+                  "console.log('JWT capturé:', body.token.substring(0, 24) + '...');",
+                  "console.log('User ID capturé:', body.user.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"root\",\n  \"password\": \"root\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/login — 401 mauvais mot de passe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Code unauthorized', function () {",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"root\",\n  \"password\": \"wrong-password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /areas — 401 sans token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Code unauthorized', function () {",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buildingId\": \"building-jwt-001\",\n  \"name\": \"Zone JWT Sans Token\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /areas — 201 avec token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Zone créée (token valide)', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('name');",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('createdAreaId', body.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buildingId\": \"building-jwt-002\",\n  \"name\": \"Zone JWT Avec Token\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Tests d'authentification JWT: login, accès refusé sans token, accès autorisé avec token."
+    },
+    {
+      "name": "1 — Bootstrap",
+      "item": [
+        {
+          "name": "Initialiser IDs seed (areas/sensors)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "const areas = (body && body.data) || [];",
+                  "pm.test('Au moins 2 zones disponibles', function () { pm.expect(areas.length).to.be.at.least(2); });",
+                  "",
+                  "let areaA = areas.find(a => typeof a.name === 'string' && a.name.includes('Zone A')) || areas[0];",
+                  "let areaB = areas.find(a => typeof a.name === 'string' && a.name.includes('Zone B')) || areas.find(a => a.id !== areaA.id) || areas[1] || areaA;",
+                  "",
+                  "pm.collectionVariables.set('areaAId', areaA.id);",
+                  "pm.collectionVariables.set('areaBId', areaB.id);",
+                  "",
+                  "const allSensors = areas.flatMap(a => Array.isArray(a.sensors) ? a.sensors : []);",
+                  "const active = allSensors.find(s => s.status === 'active');",
+                  "const inactive = allSensors.find(s => s.status === 'inactive');",
+                  "",
+                  "if (active) {",
+                  "  pm.collectionVariables.set('sensorActiveId', active.id);",
+                  "  pm.collectionVariables.set('sensorActivId', active.id);",
+                  "}",
+                  "if (inactive) pm.collectionVariables.set('sensorInactiveId', inactive.id);",
+                  "",
+                  "console.log('IDs seed initialisés:', {",
+                  "  areaAId: areaA && areaA.id,",
+                  "  areaBId: areaB && areaB.id,",
+                  "  sensorActiveId: active && active.id,",
+                  "  sensorInactiveId: inactive && inactive.id",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Initialiser ID actionneur (zone A)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "const list = (body && body.data) || [];",
+                  "pm.test('Au moins 1 actionneur disponible', function () { pm.expect(list.length).to.be.at.least(1); });",
+                  "if (list.length > 0) pm.collectionVariables.set('actuatorId', list[0].id);",
+                  "console.log('actuatorId initialisé:', list[0] && list[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/areas/{{areaAId}}/actuators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas",
+                "{{areaAId}}",
+                "actuators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Créer une zone de test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Zone créée (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('createdAreaId', body.id);",
+                  "console.log('Zone créée — id:', body.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buildingId\": \"building-test-001\",\n  \"name\": \"Zone Test — Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Créer un utilisateur de test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Utilisateur créé (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('createdUserId', body.id);",
+                  "console.log('Utilisateur créé — id:', body.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@thermosense.com\",\n  \"name\": \"Test Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Crée des ressources de test et capture les IDs dans les variables de la collection (nécessite jwtToken obtenu via 0 — Auth JWT)."
+    },
+    {
+      "name": "2 — Areas",
+      "item": [
+        {
+          "name": "POST /areas — Créer une zone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Contient id, name, buildingId, sensors', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('name');",
+                  "  pm.expect(body).to.have.property('buildingId');",
+                  "  pm.expect(body).to.have.property('sensors');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buildingId\": \"building-001\",\n  \"name\": \"Zone C — Salle serveurs\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /areas — 400 payload invalide",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Erreur avec code et message', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zone sans buildingId\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 — Sensors",
+      "item": [
+        {
+          "name": "GET /sensors/:id — Capteur actif",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Schema capteur valide', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('type');",
+                  "  pm.expect(body).to.have.property('status');",
+                  "  pm.expect(body).to.have.property('areaId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorActiveId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /sensors/:id — Capteur inactif",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status est inactive', function () {",
+                  "  pm.expect(pm.response.json().status).to.eql('inactive');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorInactiveId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorInactiveId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /sensors/:id — 404 inexistant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Erreur notFound', function () {",
+                  "  pm.expect(pm.response.json().code).to.eql('notFound');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sensors/sensor-999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "sensor-999"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /sensors/:id/measures — Nouvelle mesure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Mesure créée avec id et sensorId', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('sensorId');",
+                  "  pm.expect(body).to.have.property('value');",
+                  "  pm.expect(body).to.have.property('timestamp');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-03-17T10:30:00Z\",\n  \"value\": 21.3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}/measures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorActiveId}}",
+                "measures"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4 — Measures",
+      "item": [
+        {
+          "name": "GET /sensors/:id/measures — Liste paginée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Retourne un objet avec data (array)', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}/measures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorActiveId}}",
+                "measures"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /sensors/:id/measures — Avec pagination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Limite respectée (max 3)', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.length).to.be.at.most(3);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}/measures?limit=3&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorActiveId}}",
+                "measures"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "3"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /sensors/:id/measures — Nouvelle mesure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Mesure créée avec id et sensorId', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('sensorId');",
+                  "  pm.expect(body).to.have.property('value');",
+                  "  pm.expect(body).to.have.property('timestamp');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-03-17T10:30:00Z\",\n  \"value\": 21.3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}/measures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorActiveId}}",
+                "measures"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /sensors/:id/measures — 409 capteur inactif",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 (capteur inactif)', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Code erreur deviceUnavailable', function () {",
+                  "  pm.expect(pm.response.json().code).to.eql('deviceUnavailable');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-03-17T10:30:00Z\",\n  \"value\": 19.5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorInactiveId}}/measures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorInactiveId}}",
+                "measures"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /sensors/:id/measures — 400 payload invalide",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 21.3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensors/{{sensorActiveId}}/measures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensors",
+                "{{sensorActiveId}}",
+                "measures"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5 — Actuators",
+      "item": [
+        {
+          "name": "GET /areas/:areaId/actuators — Liste zone A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Retourne data (array)', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Capturer le premier actuator ID pour les tests suivants",
+                  "const body = pm.response.json();",
+                  "if (body.data && body.data.length > 0) {",
+                  "  pm.collectionVariables.set('actuatorId', body.data[0].id);",
+                  "  console.log('Actuator ID capturé:', body.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/areas/{{areaAId}}/actuators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas",
+                "{{areaAId}}",
+                "actuators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /areas/:areaId/actuators — Créer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Actionneur créé', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body.type).to.eql('thermostat');",
+                  "  pm.expect(body.state).to.eql('off');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('createdActuatorId', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"thermostat\",\n  \"state\": \"off\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas/{{areaAId}}/actuators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas",
+                "{{areaAId}}",
+                "actuators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuators/:id — Détail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Schema valide', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('type');",
+                  "  pm.expect(body).to.have.property('state');",
+                  "  pm.expect(body).to.have.property('areaId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuators/{{actuatorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuators",
+                "{{actuatorId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /actuators/:id — Changer état",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('État mis à jour', function () {",
+                  "  pm.expect(pm.response.json().state).to.eql('auto');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"auto\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/actuators/{{actuatorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuators",
+                "{{actuatorId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /actuators/:id — 400 état invalide",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"turbo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/actuators/{{actuatorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuators",
+                "{{actuatorId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /actuators/:id — Supprimer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuators/{{createdActuatorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuators",
+                "{{createdActuatorId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuators/:id — 404 après suppression",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuators/{{createdActuatorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuators",
+                "{{createdActuatorId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6 — Alert Thresholds",
+      "item": [
+        {
+          "name": "GET /areas/:areaId/alert-thresholds — Liste",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Retourne un array', function () {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/areas/{{areaAId}}/alert-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas",
+                "{{areaAId}}",
+                "alert-thresholds"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /areas/:areaId/alert-thresholds — Créer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Seuil créé', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('sensorId');",
+                  "  pm.expect(body.thresholdValue).to.eql(35);",
+                  "  pm.expect(body.comparisonOperator).to.eql('greaterThan');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": \"{{sensorActiveId}}\",\n  \"thresholdValue\": 35,\n  \"comparisonOperator\": \"greaterThan\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas/{{areaAId}}/alert-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas",
+                "{{areaAId}}",
+                "alert-thresholds"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /areas/:areaId/alert-thresholds — 400 opérateur invalide",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": \"{{sensorActiveId}}\",\n  \"thresholdValue\": 35,\n  \"comparisonOperator\": \"invalid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/areas/{{areaAId}}/alert-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "areas",
+                "{{areaAId}}",
+                "alert-thresholds"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7 — Users",
+      "item": [
+        {
+          "name": "POST /users — Créer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Utilisateur créé avec id et email', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('email');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nouveau@thermosense.com\",\n  \"name\": \"Nouveau Utilisateur\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /users — 400 email manquant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sans Email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /users/:id — Détail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Retourne id, email, name', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('email');",
+                  "  pm.expect(body).to.have.property('name');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /users/:id — 404 inexistant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Erreur notFound', function () {",
+                  "  pm.expect(pm.response.json().code).to.eql('notFound');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/user-999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "user-999"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "areaAId",
+      "value": "",
+      "description": "ID Zone A (depuis console serveur)"
+    },
+    {
+      "key": "areaBId",
+      "value": "",
+      "description": "ID Zone B (depuis console serveur)"
+    },
+    {
+      "key": "sensorActiveId",
+      "value": "",
+      "description": "ID d'un capteur actif"
+    },
+    {
+      "key": "sensorInactiveId",
+      "value": "",
+      "description": "ID d'un capteur inactif"
+    },
+    {
+      "key": "actuatorId",
+      "value": "",
+      "description": "ID d'un actionneur existant"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "description": "ID d'un utilisateur existant"
+    },
+    {
+      "key": "createdAreaId",
+      "value": ""
+    },
+    {
+      "key": "createdActuatorId",
+      "value": ""
+    },
+    {
+      "key": "createdUserId",
+      "value": ""
+    },
+    {
+      "key": "createdThresholdId",
+      "value": ""
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "description": "JWT Bearer pour les routes protégées"
+    },
+    {
+      "key": "sensorActivId",
+      "value": "",
+      "description": "Alias legacy de sensorActiveId"
+    }
+  ]
+}
