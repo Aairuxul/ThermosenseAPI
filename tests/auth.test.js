@@ -159,6 +159,33 @@ async function run() {
   }
 
   // ============================================================
+  // TEST BONUS — Requete avec token dont aud ne correspond pas
+  // ============================================================
+  {
+    const wrongAudToken = jwt.sign(
+      { sub: "user-1", email: "root", role: "admin", scope: "read write admin" },
+      JWT_SECRET,
+      { expiresIn: "30m", audience: "other-api" }
+    );
+
+    const res = await request("POST", "/areas", {
+      headers: { Authorization: `Bearer ${wrongAudToken}` },
+      body: { buildingId: "building-1", name: "Zone Mauvais Audience" },
+    });
+
+    report(
+      "Test bonus — Requete avec token dont aud ne correspond pas a l'API",
+      401,
+      res.status,
+      [
+        "Le middleware a detecte que le claim aud ('other-api') ne correspond pas a 'thermosense-api'.",
+        "Un token valide destine a une autre API est correctement rejete.",
+        `Reponse : ${JSON.stringify(res.body)}`,
+      ].join("\n")
+    );
+  }
+
+  // ============================================================
   // RESUME
   // ============================================================
   console.log(`\n${"=".repeat(60)}`);
