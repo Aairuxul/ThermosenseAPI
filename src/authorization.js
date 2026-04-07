@@ -1,4 +1,5 @@
 const db = require('./store');
+const { logAuthz } = require('./security-logger');
 
 function getCurrentUser(req) {
     const userId = req.user && (req.user.userId || req.user.sub);
@@ -49,6 +50,7 @@ function requireScope(requiredScope) {
         }
 
         if (!hasScope(req.user, requiredScope)) {
+            logAuthz('DENIED', req.user.sub, req.user.role, req.method, `${req.baseUrl}${req.path} (requires ${requiredScope})`);
             return denyForbidden(res);
         }
 
@@ -80,6 +82,7 @@ function requireAreaAccess(req, res, next) {
     }
 
     if (!isAdmin(user) && user.zone !== area.id) {
+        logAuthz('DENIED', user.id, user.role, 'ACCESS', `Zone ${req.params.areaId} (BOLA)`);
         return denyNotFound(res, 'Zone', req.params.areaId);
     }
 
@@ -99,6 +102,7 @@ function requireSensorAccess(req, res, next) {
     }
 
     if (!isAdmin(user) && user.zone !== sensor.areaId) {
+        logAuthz('DENIED', user.id, user.role, 'ACCESS', `Capteur ${req.params.sensorId} (BOLA)`);
         return denyNotFound(res, 'Capteur', req.params.sensorId);
     }
 
@@ -118,6 +122,7 @@ function requireActuatorAccess(req, res, next) {
     }
 
     if (!isAdmin(user) && user.zone !== actuator.areaId) {
+        logAuthz('DENIED', user.id, user.role, 'ACCESS', `Actionneur ${req.params.actuatorId} (BOLA)`);
         return denyNotFound(res, 'Actionneur', req.params.actuatorId);
     }
 
@@ -137,6 +142,7 @@ function requireUserAccess(req, res, next) {
     }
 
     if (!isAdmin(user) && targetUser.id !== user.id) {
+        logAuthz('DENIED', user.id, user.role, 'ACCESS', `Utilisateur ${req.params.userId} (BOLA)`);
         return denyNotFound(res, 'Utilisateur', req.params.userId);
     }
 

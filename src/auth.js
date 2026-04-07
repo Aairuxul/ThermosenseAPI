@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { logAuth } = require('./security-logger');
 
 // Clé secrète JWT (dans un vrai projet, utilisez une variable d'environnement)
 const JWT_SECRET = process.env.JWT_SECRET || 'thermosense-secret-key-change-in-production';
@@ -27,6 +28,7 @@ function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        logAuth('FAILURE', null, null, 'Missing or malformed Authorization header');
         return res.status(401).json({
             code: 'unauthorized',
             message: "Token d'authentification manquant ou invalide",
@@ -41,9 +43,11 @@ function authenticate(req, res, next) {
             issuer: JWT_ISSUER,
         });
 
-        req.user = decoded; // { sub, userId, email, role, scope, aud, exp, ... }
+        req.user = decoded;
+        logAuth('SUCCESS', decoded.email, decoded.role, `Authenticated as ${decoded.sub}`);
         next();
     } catch (err) {
+        logAuth('FAILURE', null, null, `Token rejected: ${err.message}`);
         return res.status(401).json({
             code: 'unauthorized',
             message: 'Token invalide ou expiré',
@@ -58,7 +62,6 @@ function generateToken(user) {
     const scope = roleToScope(user.role);
 
     const payload = {
-        sub: String(user.id),
         sub: user.id,
         email: user.email,
         role: user.role,

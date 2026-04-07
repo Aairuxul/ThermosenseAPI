@@ -1,8 +1,11 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
 const path = require("path");
+const { logRateLimit } = require("./security-logger");
 
 const db = require("./store");
 const authRouter = require("./routes/auth");
@@ -35,8 +38,40 @@ if (process.env.NODE_ENV !== 'production') {
   ];
 }
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// --- Rate limiting ---
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 tentatives par fenetre
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    code: "tooManyRequests",
+    message: "Trop de tentatives de connexion. Reessayez dans 15 minutes.",
+  },
+  handler: (req, res, next, options) => {
+    logRateLimit(req.ip, "/auth/login");
+    res.status(429).json(options.message);
+  },
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requetes par minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    code: "tooManyRequests",
+    message: "Trop de requetes. Reessayez dans quelques instants.",
+  },
+  handler: (req, res, next, options) => {
+    logRateLimit(req.ip, req.path);
+    res.status(429).json(options.message);
+  },
+});
 
 // --- Health check ---
 app.get("/health", (req, res) => {
@@ -54,17 +89,17 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
 }));
 
 // --- Routes publiques ---
-app.use("/auth", authRouter);
+app.use("/auth", loginLimiter, authRouter);
 
 // --- Routes protégées ---
-// BOLA/BFLA appliqués via middleware d'authentification et d'autorisation par ressource
-app.use("/areas", areasRouter);
-app.use("/sensors", sensorsRouter);
-app.use("/sensors", measuresRouter);
-app.use("/areas", alertThresholdsRouter);
-app.use("/areas", areaActuatorsRouter);
-app.use("/actuators", actuatorsRouter);
-app.use("/users", usersRouter);
+// Rate limiting global + BOLA/BFLA via middleware d'authentification et d'autorisation
+app.use("/areas", apiLimiter, areasRouter);
+app.use("/sensors", apiLimiter, sensorsRouter);
+app.use("/sensors", apiLimiter, measuresRouter);
+app.use("/areas", apiLimiter, alertThresholdsRouter);
+app.use("/areas", apiLimiter, areaActuatorsRouter);
+app.use("/actuators", apiLimiter, actuatorsRouter);
+app.use("/users", apiLimiter, usersRouter);
 
 // 404 pour les routes non définies
 app.use((req, res) => {

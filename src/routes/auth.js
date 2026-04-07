@@ -2,6 +2,7 @@ const { Router } = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../store");
 const { generateToken } = require("../auth");
+const { logAuth } = require("../security-logger");
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.post("/login", async (req, res, next) => {
     const user = db.users.find((u) => u.email === email);
 
     if (!user || !user.password) {
+      logAuth('FAILURE', email, null, 'Unknown email');
       return res.status(401).json({
         code: "unauthorized",
         message: "Email ou mot de passe incorrect",
@@ -39,6 +41,7 @@ router.post("/login", async (req, res, next) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
+      logAuth('FAILURE', email, user.role, 'Invalid password');
       return res.status(401).json({
         code: "unauthorized",
         message: "Email ou mot de passe incorrect",
@@ -47,6 +50,7 @@ router.post("/login", async (req, res, next) => {
 
     // Générer le token JWT
     const token = generateToken(user);
+    logAuth('SUCCESS', user.email, user.role, `Login successful (${user.id})`);
 
     res.json({
       token,
