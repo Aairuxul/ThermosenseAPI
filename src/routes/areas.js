@@ -4,6 +4,11 @@ const db = require("../store");
 
 const router = Router();
 
+// GET /areas
+router.get("/", (req, res) => {
+  res.json({ data: db.areas });
+});
+
 // POST /areas
 router.post("/", (req, res) => {
   const { buildingId, name } = req.body;

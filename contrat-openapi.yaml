@@ -31,6 +31,25 @@ tags:
     description: Gestion des utilisateurs (users).
 paths:
   /areas:
+    get:
+      tags: [Areas]
+      operationId: listAreas
+      summary: Lister toutes les zones
+      description: |
+        Retourne la liste de toutes les zones enregistrées dans la plateforme.
+      responses:
+        "200":
+          description: Liste des zones.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Areas"
     post:
       tags: [Areas]
       operationId: createArea
@@ -234,6 +253,12 @@ paths:
                 $ref: "#/components/schemas/Measures"
         "400":
           description: Payload invalide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Capteur indisponible (hors ligne ou inactif).
           content:
             application/json:
               schema:
