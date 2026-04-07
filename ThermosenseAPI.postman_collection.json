@@ -26,10 +26,10 @@
                   "});",
                   "",
                   "const body = pm.response.json();",
-                  "pm.environment.set('jwtToken', body.token);
-                  pm.collectionVariables.set('jwtToken', body.token);",
-                  "pm.environment.set('userId', body.user.id);
-                  pm.collectionVariables.set('userId', body.user.id);",
+                  "pm.environment.set('jwtToken', body.token);",
+                  "pm.collectionVariables.set('jwtToken', body.token);",
+                  "pm.environment.set('userId', body.user.id);",
+                  "pm.collectionVariables.set('userId', body.user.id);",
                   "console.log('JWT capturé:', body.token.substring(0, 24) + '...');",
                   "console.log('User ID capturé:', body.user.id);"
                 ],
@@ -158,8 +158,8 @@
                   "});",
                   "",
                   "const body = pm.response.json();",
-                  "pm.environment.set('createdAreaId', body.id);
-                  pm.collectionVariables.set('createdAreaId', body.id);"
+                  "pm.environment.set('createdAreaId', body.id);",
+                  "pm.collectionVariables.set('createdAreaId', body.id);"
                 ],
                 "type": "text/javascript"
               }
@@ -214,23 +214,25 @@
                   "let areaA = areas.find(a => typeof a.name === 'string' && a.name.includes('Zone A')) || areas[0];",
                   "let areaB = areas.find(a => typeof a.name === 'string' && a.name.includes('Zone B')) || areas.find(a => a.id !== areaA.id) || areas[1] || areaA;",
                   "",
-                  "pm.environment.set('areaAId', areaA.id);
-                  pm.collectionVariables.set('areaAId', areaA.id);",
-                  "pm.environment.set('areaBId', areaB.id);
-                  pm.collectionVariables.set('areaBId', areaB.id);",
+                  "pm.environment.set('areaAId', areaA.id);",
+                  "pm.collectionVariables.set('areaAId', areaA.id);",
+                  "pm.environment.set('areaBId', areaB.id);",
+                  "pm.collectionVariables.set('areaBId', areaB.id);",
                   "",
                   "const allSensors = areas.flatMap(a => Array.isArray(a.sensors) ? a.sensors : []);",
                   "const active = allSensors.find(s => s.status === 'active');",
                   "const inactive = allSensors.find(s => s.status === 'inactive');",
                   "",
                   "if (active) {",
-                  "  pm.environment.set('sensorActiveId', active.id);
-                  pm.collectionVariables.set('sensorActiveId', active.id);",
-                  "  pm.environment.set('sensorActivId', active.id);
-                  pm.collectionVariables.set('sensorActivId', active.id);",
+                  "  pm.environment.set('sensorActiveId', active.id);",
+                  "  pm.collectionVariables.set('sensorActiveId', active.id);",
+                  "  pm.environment.set('sensorActivId', active.id);",
+                  "  pm.collectionVariables.set('sensorActivId', active.id);",
                   "}",
-                  "if (inactive) pm.environment.set('sensorInactiveId', inactive.id);
-                  pm.collectionVariables.set('sensorInactiveId', inactive.id);",
+                  "if (inactive) {",
+                  "  pm.environment.set('sensorInactiveId', inactive.id);",
+                  "  pm.collectionVariables.set('sensorInactiveId', inactive.id);",
+                  "}",
                   "",
                   "console.log('IDs seed initialisés:', {",
                   "  areaAId: areaA && areaA.id,",
@@ -274,8 +276,10 @@
                   "const body = pm.response.json();",
                   "const list = (body && body.data) || [];",
                   "pm.test('Au moins 1 actionneur disponible', function () { pm.expect(list.length).to.be.at.least(1); });",
-                  "if (list.length > 0) pm.environment.set('actuatorId', list[0].id);
-                  pm.collectionVariables.set('actuatorId', list[0].id);",
+                  "if (list.length > 0) {",
+                  "  pm.environment.set('actuatorId', list[0].id);",
+                  "  pm.collectionVariables.set('actuatorId', list[0].id);",
+                  "}",
                   "console.log('actuatorId initialisé:', list[0] && list[0].id);"
                 ],
                 "type": "text/javascript"
@@ -316,8 +320,8 @@
                   "});",
                   "",
                   "const body = pm.response.json();",
-                  "pm.environment.set('createdAreaId', body.id);
-                  pm.collectionVariables.set('createdAreaId', body.id);",
+                  "pm.environment.set('createdAreaId', body.id);",
+                  "pm.collectionVariables.set('createdAreaId', body.id);",
                   "console.log('Zone créée — id:', body.id);"
                 ],
                 "type": "text/javascript"
@@ -364,8 +368,8 @@
                   "});",
                   "",
                   "const body = pm.response.json();",
-                  "pm.environment.set('createdUserId', body.id);
-                  pm.collectionVariables.set('createdUserId', body.id);",
+                  "pm.environment.set('createdUserId', body.id);",
+                  "pm.collectionVariables.set('createdUserId', body.id);",
                   "console.log('Utilisateur créé — id:', body.id);"
                 ],
                 "type": "text/javascript"
@@ -929,8 +933,8 @@
                   "// Capturer le premier actuator ID pour les tests suivants",
                   "const body = pm.response.json();",
                   "if (body.data && body.data.length > 0) {",
-                  "  pm.environment.set('actuatorId', body.data[0].id);
-                  pm.collectionVariables.set('actuatorId', body.data[0].id);",
+                  "  pm.environment.set('actuatorId', body.data[0].id);",
+                  "  pm.collectionVariables.set('actuatorId', body.data[0].id);",
                   "  console.log('Actuator ID capturé:', body.data[0].id);",
                   "}"
                 ],
@@ -977,8 +981,8 @@
                   "  pm.expect(body.state).to.eql('off');",
                   "});",
                   "",
-                  "pm.environment.set('createdActuatorId', pm.response.json().id);
-                  pm.collectionVariables.set('createdActuatorId', pm.response.json().id);"
+                  "pm.environment.set('createdActuatorId', pm.response.json().id);",
+                  "pm.collectionVariables.set('createdActuatorId', pm.response.json().id);"
                 ],
                 "type": "text/javascript"
               }
