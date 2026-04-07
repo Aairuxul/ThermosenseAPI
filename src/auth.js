@@ -3,9 +3,11 @@ const { logAuth } = require('./security-logger');
 
 // Clé secrète JWT (dans un vrai projet, utilisez une variable d'environnement)
 const JWT_SECRET = process.env.JWT_SECRET || 'thermosense-secret-key-change-in-production';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${JWT_SECRET}-refresh`;
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'thermosense-api';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'thermosense-auth';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30m';
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
 function roleToScope(role) {
     switch (role) {
@@ -43,8 +45,14 @@ function authenticate(req, res, next) {
             issuer: JWT_ISSUER,
         });
 
-        req.user = decoded;
-        logAuth('SUCCESS', decoded.email, decoded.role, `Authenticated as ${decoded.sub}`);
+        if (decoded.tokenType !== 'access') {
+            return res.status(401).json({
+                code: 'unauthorized',
+                message: 'Type de token invalide',
+            });
+        }
+
+        req.user = decoded; // { sub, userId, email, role, scope, aud, exp, ... }
         next();
     } catch (err) {
         logAuth('FAILURE', null, null, `Token rejected: ${err.message}`);
@@ -56,17 +64,19 @@ function authenticate(req, res, next) {
 }
 
 /**
- * Génère un JWT pour un utilisateur
+ * Génère un access token JWT pour un utilisateur
  */
-function generateToken(user) {
+function generateAccessToken(user) {
     const scope = roleToScope(user.role);
 
     const payload = {
-        sub: user.id,
+        sub: String(user.id),
+        userId: user.id,
         email: user.email,
         role: user.role,
         scope,
-  };
+        tokenType: 'access',
+    };
 
     return jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN,
@@ -75,11 +85,49 @@ function generateToken(user) {
     });
 }
 
+/**
+ * Génère un refresh token JWT pour un utilisateur
+ */
+function generateRefreshToken(user) {
+    const payload = {
+        sub: String(user.id),
+        userId: user.id,
+        tokenType: 'refresh',
+    };
+
+    return jwt.sign(payload, JWT_REFRESH_SECRET, {
+        expiresIn: JWT_REFRESH_EXPIRES_IN,
+        audience: JWT_AUDIENCE,
+        issuer: JWT_ISSUER,
+    });
+}
+
+function verifyRefreshToken(token) {
+    const decoded = jwt.verify(token, JWT_REFRESH_SECRET, {
+        audience: JWT_AUDIENCE,
+        issuer: JWT_ISSUER,
+    });
+
+    if (decoded.tokenType !== 'refresh') {
+        throw new jwt.JsonWebTokenError('Invalid token type');
+    }
+
+    return decoded;
+}
+
+// Compatibilité ascendante
+const generateToken = generateAccessToken;
+
 module.exports = {
     authenticate,
     generateToken,
+    generateAccessToken,
+    generateRefreshToken,
+    verifyRefreshToken,
     JWT_SECRET,
+    JWT_REFRESH_SECRET,
     JWT_AUDIENCE,
     JWT_ISSUER,
     JWT_EXPIRES_IN,
+    JWT_REFRESH_EXPIRES_IN,
 };

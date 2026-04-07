@@ -1,7 +1,11 @@
 const { Router } = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../store");
-const { generateToken } = require("../auth");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} = require("../auth");
 const { logAuth } = require("../security-logger");
 
 const router = Router();
@@ -48,12 +52,14 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
-    // Générer le token JWT
-    const token = generateToken(user);
+    // Générer les tokens JWT
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
     logAuth('SUCCESS', user.email, user.role, `Login successful (${user.id})`);
 
     res.json({
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -64,6 +70,48 @@ router.post("/login", async (req, res, next) => {
   } catch (error) {
     console.error("Erreur lors du login:", error);
     next(error); // Passer au gestionnaire d'erreurs global
+  }
+});
+
+/**
+ * POST /auth/refresh
+ * Renouvelle les tokens à partir d'un refresh token valide
+ */
+router.post("/refresh", (req, res) => {
+  const { refreshToken } = req.body || {};
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      code: "invalidParameter",
+      message: "Le champ refreshToken est requis",
+      details: [{ field: "refreshToken", reason: "Le champ refreshToken est requis" }],
+    });
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken);
+    const userId = decoded.userId || decoded.sub;
+    const user = db.users.find((u) => u.id === userId);
+
+    if (!user) {
+      return res.status(401).json({
+        code: "unauthorized",
+        message: "Refresh token invalide",
+      });
+    }
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    return res.json({
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    return res.status(401).json({
+      code: "unauthorized",
+      message: "Refresh token invalide ou expiré",
+    });
   }
 });
 
