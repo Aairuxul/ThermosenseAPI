@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const net = require("net");
 const path = require("path");
 const { spawn } = require("child_process");
+const { log } = require("console");
 
 const JWT_SECRET = process.env.JWT_SECRET || "thermosense-secret-key-change-in-production";
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "thermosense-api";
@@ -156,7 +157,7 @@ async function run() {
         headers: { Authorization: `Bearer ${validToken}` },
         body: { buildingId: "building-1", name: "Zone Test AuthN" },
       });
-
+      console.log("ON EST LA", res);
       report(
         "Test nominal — Requete avec token valide sur POST /areas",
         201,
@@ -246,7 +247,7 @@ async function run() {
     }
 
     // ============================================================
-    // TEST BONUS — Requete Swagger avec Bearer duplique
+    // TEST 2 — Requete Swagger avec Bearer duplique
     // ============================================================
     {
       const res = await request("POST", "/areas", {
@@ -255,7 +256,7 @@ async function run() {
       });
 
       report(
-        "Test bonus — Requete Swagger avec Bearer duplique",
+        "Test 2 — Requete Swagger avec Bearer duplique",
         201,
         res.status,
         [
@@ -267,7 +268,7 @@ async function run() {
     }
 
     // ============================================================
-    // TEST BONUS — Requete Swagger avec token entre guillemets
+    // TEST 3 — Requete Swagger avec token entre guillemets
     // ============================================================
     {
       const res = await request("POST", "/areas", {
@@ -276,7 +277,7 @@ async function run() {
       });
 
       report(
-        "Test bonus — Requete Swagger avec token entre guillemets",
+        "Test 3 — Requete Swagger avec token entre guillemets",
         201,
         res.status,
         [
@@ -288,7 +289,7 @@ async function run() {
     }
 
     // ============================================================
-    // TEST BONUS — Requete Swagger avec payload JSON colle
+    // TEST 4 — Requete Swagger avec payload JSON colle
     // ============================================================
     {
       const res = await request("POST", "/areas", {
@@ -297,7 +298,7 @@ async function run() {
       });
 
       report(
-        "Test bonus — Requete Swagger avec payload JSON colle",
+        "Test 4 — Requete Swagger avec payload JSON colle",
         201,
         res.status,
         [
@@ -309,7 +310,7 @@ async function run() {
     }
 
     // ============================================================
-    // TEST BONUS — Requete avec token dont aud ne correspond pas
+    // TEST 5 — Requete avec token dont aud ne correspond pas
     // ============================================================
     {
       const wrongAudToken = jwt.sign(
@@ -324,12 +325,30 @@ async function run() {
       });
 
       report(
-        "Test bonus — Requete avec token dont aud ne correspond pas a l'API",
+        "Test 5 — Requete avec token dont aud ne correspond pas a l'API",
         401,
         res.status,
         [
           "Le middleware a detecte que le claim aud ('other-api') ne correspond pas a 'thermosense-api'.",
           "Un token valide destine a une autre API est correctement rejete.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+      );
+    }
+
+    // ============================================================
+    // TEST 6 — Requete sans token
+    // ============================================================
+    {
+      const res = await request("GET", "/areas");
+
+      report(
+        "Test 6 — Requete sans token",
+        401,
+        res.status,
+        [
+          "Le middleware rejette la requete qui n'a pas de header Authorization.",
+          "L'endpoint GET /areas est protege et ne doit pas etre accessible sans token.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
       );
