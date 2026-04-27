@@ -14,6 +14,7 @@ info:
   description: |
     API de gestion de la plateforme ThermoSense —
     supervision de capteurs et pilotage d'actionneurs pour le confort thermique des bâtiments.
+    Le controle d'acces combine des scopes JWT, des restrictions par role et des verifications BOLA sur la zone ou la ressource cible.
   contact:
     name: "Support ThermoSense"
     email: "coucou@test.com"
@@ -112,6 +113,8 @@ paths:
                         type: string
                       role:
                         type: string
+                        description: Role applicatif attribue a l'identite authentifiee.
+                        enum: [admin, operator, reader, device]
         "400":
           description: Payload invalide
           content:
@@ -133,8 +136,14 @@ paths:
       description: |
         Retourne la liste de toutes les zones enregistrées dans la plateforme.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`, `reader`
+        
+        - `admin` : acces a toutes les zones
+        - `operator`, `reader` : acces limite a leur zone assignee
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader]
       responses:
         "200":
           description: Liste des zones.
@@ -156,8 +165,11 @@ paths:
         Créer une zone dans un bâtiment spécifique. La zone doit être associée à un 
         bâtiment existant.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`
       security:
         - BearerAuth: []
+      x-required-roles: [admin]
       requestBody:
         required: true
         content:
@@ -196,8 +208,14 @@ paths:
         incluant son type et son statut opérationnel.
         Utilisé par l'application mobile pour superviser un capteur précis.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`, `reader`, `device`
+        
+        - `device` : acces uniquement a son propre capteur
+        - `operator`, `reader` : acces limite aux capteurs de leur zone
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader, device]
       parameters:
         - name: sensorId
           in: path
@@ -229,8 +247,13 @@ paths:
       description: |
         Retourne les règles d'alerte configurées pour une zone donnée.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`, `reader`
+        
+        - `operator`, `reader` : acces limite a leur zone assignee
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader]
       parameters:
         - $ref: "#/components/parameters/areaId"
       responses:
@@ -257,8 +280,13 @@ paths:
         Configure une nouvelle règle d'alerte pour une zone.
         La règle déclenche une alerte si la condition est remplie pendant une durée donnée.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`
+        
+        - `operator` : acces limite a sa zone assignee
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator]
       parameters:
         - $ref: "#/components/parameters/areaId"
       requestBody:
@@ -291,8 +319,14 @@ paths:
             Retourne les mesures associées à un capteur donné.
             Les résultats sont paginés pour limiter le volume de données transférées.
             **Requiert une authentification.**
+            
+            **Roles autorises:** `admin`, `operator`, `reader`, `device`
+            
+            - `device` : acces uniquement a son propre capteur
+            - `operator`, `reader` : acces limite aux capteurs de leur zone
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader, device]
       parameters:
         - name: sensorId
           in : path
@@ -343,8 +377,13 @@ paths:
       description: |
         Reçoit une mesure et l'associe au capteur indiqué.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `device`
+        
+        - `device` : acces uniquement a son propre capteur
       security:
         - BearerAuth: []
+      x-required-roles: [admin, device]
       parameters:
         - $ref: "#/components/parameters/sensorId"
       requestBody:
@@ -389,8 +428,13 @@ paths:
         Retourne la liste des actionneurs associés à une zone donnée.
         Utilisé pour afficher et gérer les actionneurs d'une zone.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`, `reader`
+        
+        - `operator`, `reader` : acces limite a leur zone assignee
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader]
       parameters:
         - $ref: "#/components/parameters/areaId"
       responses:
@@ -420,8 +464,11 @@ paths:
         Crée un nouvel actionneur et l'associe à la zone spécifiée.
         Les détails de l'actionneur sont fournis dans le corps de la requête.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`
       security:
         - BearerAuth: []
+      x-required-roles: [admin]
       parameters:
         - $ref: "#/components/parameters/areaId"
       requestBody:
@@ -452,8 +499,14 @@ paths:
       description: |
         Retourne les informations détaillées d'un actionneur donné.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`, `reader`, `device`
+        
+        - `device` : acces uniquement a son propre actionneur
+        - `operator`, `reader` : acces limite aux actionneurs de leur zone
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader, device]
       parameters:
         - $ref: "#/components/parameters/actuatorId"
       responses:
@@ -477,8 +530,13 @@ paths:
         Met à jour l'état ou les propriétés d'un actionneur existant.
         Seules les propriétés fournies dans le corps seront modifiées.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`
+        
+        - `operator` : acces limite aux actionneurs de sa zone
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator]
       parameters:
         - $ref: "#/components/parameters/actuatorId"
       requestBody:
@@ -511,8 +569,11 @@ paths:
       description: |
         Supprime l'actionneur identifié par `actuatorId`.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`
       security:
         - BearerAuth: []
+      x-required-roles: [admin]
       parameters:
         - $ref: "#/components/parameters/actuatorId"
       responses:
@@ -533,8 +594,11 @@ paths:
       description: |
         Crée un nouvel utilisateur avec l'email et le nom fournis.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`
       security:
         - BearerAuth: []
+      x-required-roles: [admin]
       requestBody:
         required: true
         content:
@@ -575,8 +639,14 @@ paths:
       description: |
         Retourne les informations publiques d'un utilisateur identifié.
         **Requiert une authentification.**
+        
+        **Roles autorises:** `admin`, `operator`, `reader`
+        
+        - `admin` : acces a tous les utilisateurs
+        - `operator`, `reader` : acces uniquement a leur propre profil
       security:
         - BearerAuth: []
+      x-required-roles: [admin, operator, reader]
       parameters:
         - $ref: "#/components/parameters/userId"
       responses:

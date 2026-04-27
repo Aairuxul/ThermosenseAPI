@@ -3,6 +3,7 @@ const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
 const {
+  requireRoles,
   requireScope,
   requireAreaAccess,
   requireActuatorAccess,
@@ -12,13 +13,13 @@ const areaActuatorsRouter = Router();
 const actuatorsRouter = Router();
 
 // GET /areas/:areaId/actuators
-areaActuatorsRouter.get("/:areaId/actuators", authenticate, requireScope("actuators:read"), requireAreaAccess, (req, res) => {
+areaActuatorsRouter.get("/:areaId/actuators", authenticate, requireScope("actuators:read"), requireRoles("admin", "operator", "reader"), requireAreaAccess, (req, res) => {
   const data = db.actuators.filter((a) => a.areaId === req.params.areaId);
   res.json({ data });
 });
 
 // POST /areas/:areaId/actuators (protégé)
-areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actuators:write"), requireAreaAccess, (req, res) => {
+areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actuators:write"), requireRoles("admin"), requireAreaAccess, (req, res) => {
 
   const { type, state } = req.body;
   const details = [];
@@ -53,12 +54,12 @@ areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actua
 });
 
 // GET /actuators/:actuatorId
-actuatorsRouter.get("/:actuatorId", authenticate, requireScope("actuators:read"), requireActuatorAccess, (req, res) => {
+actuatorsRouter.get("/:actuatorId", authenticate, requireScope("actuators:read"), requireRoles("admin", "operator", "reader", "device"), requireActuatorAccess, (req, res) => {
   res.json(req.actuator);
 });
 
 // PUT /actuators/:actuatorId (protégé)
-actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"), requireActuatorAccess, (req, res) => {
+actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"), requireRoles("admin", "operator"), requireActuatorAccess, (req, res) => {
   const actuator = req.actuator;
 
   const { state } = req.body;
@@ -74,7 +75,7 @@ actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"
 });
 
 // DELETE /actuators/:actuatorId (protégé)
-actuatorsRouter.delete("/:actuatorId", authenticate, requireScope("actuators:write"), requireActuatorAccess, (req, res) => {
+actuatorsRouter.delete("/:actuatorId", authenticate, requireScope("actuators:write"), requireRoles("admin"), requireActuatorAccess, (req, res) => {
   const idx = db.actuators.findIndex((a) => a.id === req.params.actuatorId);
   db.actuators.splice(idx, 1);
   res.status(204).send();

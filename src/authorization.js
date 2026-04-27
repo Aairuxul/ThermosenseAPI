@@ -14,6 +14,18 @@ function isAdmin(user) {
     return user && user.role === 'admin';
 }
 
+function isOperator(user) {
+    return user && user.role === 'operator';
+}
+
+function isReader(user) {
+    return user && user.role === 'reader';
+}
+
+function isDevice(user) {
+    return user && user.role === 'device';
+}
+
 function hasScope(reqUser, requiredScope) {
     if (!reqUser || !reqUser.scope) {
         return false;
@@ -58,16 +70,47 @@ function requireScope(requiredScope) {
     };
 }
 
+function requireRoles(...allowedRoles) {
+    return (req, res, next) => {
+        if (!req.user) {
+            return denyUnauthorized(res);
+        }
+
+        if (!allowedRoles.includes(req.user.role)) {
+            logAuthz('DENIED', req.user.sub, req.user.role, req.method, `${req.baseUrl}${req.path} (requires role in ${allowedRoles.join(', ')})`);
+            return denyForbidden(res);
+        }
+
+        return next();
+    };
+}
+
 function filterAreasForUser(user) {
     if (isAdmin(user)) {
         return db.areas;
     }
 
-    if (!user || !user.zone) {
+    if (!user || !user.zone || isDevice(user)) {
         return [];
     }
 
     return db.areas.filter((area) => area.id === user.zone);
+}
+
+function canAccessArea(user, area) {
+    if (isAdmin(user)) {
+        return true;
+    }
+
+    if (isOperator(user) || isReader(user)) {
+        return user.zone === area.id;
+    }
+
+    return false;
+}
+
+function matchesDeviceResource(user, resourceType, resourceId) {
+    return isDevice(user) && user.resourceType === resourceType && user.resourceId === resourceId;
 }
 
 function requireAreaAccess(req, res, next) {
@@ -81,7 +124,7 @@ function requireAreaAccess(req, res, next) {
         return denyNotFound(res, 'Zone', req.params.areaId);
     }
 
-    if (!isAdmin(user) && user.zone !== area.id) {
+    if (!canAccessArea(user, area)) {
         logAuthz('DENIED', user.id, user.role, 'ACCESS', `Zone ${req.params.areaId} (BOLA)`);
         return denyNotFound(res, 'Zone', req.params.areaId);
     }
@@ -101,7 +144,12 @@ function requireSensorAccess(req, res, next) {
         return denyNotFound(res, 'Capteur', req.params.sensorId);
     }
 
-    if (!isAdmin(user) && user.zone !== sensor.areaId) {
+    if (isDevice(user) && !matchesDeviceResource(user, 'sensor', sensor.id)) {
+        logAuthz('DENIED', user.id, user.role, 'ACCESS', `Capteur ${req.params.sensorId} (device ownership)`);
+        return denyNotFound(res, 'Capteur', req.params.sensorId);
+    }
+
+    if (!isAdmin(user) && !isDevice(user) && user.zone !== sensor.areaId) {
         logAuthz('DENIED', user.id, user.role, 'ACCESS', `Capteur ${req.params.sensorId} (BOLA)`);
         return denyNotFound(res, 'Capteur', req.params.sensorId);
     }
@@ -121,7 +169,12 @@ function requireActuatorAccess(req, res, next) {
         return denyNotFound(res, 'Actionneur', req.params.actuatorId);
     }
 
-    if (!isAdmin(user) && user.zone !== actuator.areaId) {
+    if (isDevice(user) && !matchesDeviceResource(user, 'actuator', actuator.id)) {
+        logAuthz('DENIED', user.id, user.role, 'ACCESS', `Actionneur ${req.params.actuatorId} (device ownership)`);
+        return denyNotFound(res, 'Actionneur', req.params.actuatorId);
+    }
+
+    if (!isAdmin(user) && !isDevice(user) && user.zone !== actuator.areaId) {
         logAuthz('DENIED', user.id, user.role, 'ACCESS', `Actionneur ${req.params.actuatorId} (BOLA)`);
         return denyNotFound(res, 'Actionneur', req.params.actuatorId);
     }
@@ -153,9 +206,13 @@ function requireUserAccess(req, res, next) {
 module.exports = {
     getCurrentUser,
     isAdmin,
+    isOperator,
+    isReader,
+    isDevice,
     hasScope,
     filterAreasForUser,
     requireScope,
+    requireRoles,
     requireAreaAccess,
     requireSensorAccess,
     requireActuatorAccess,

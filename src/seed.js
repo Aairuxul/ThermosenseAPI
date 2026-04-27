@@ -132,6 +132,7 @@ async function generateSeed() {
     {
       id: nextId("user"),
       email: "admin@thermosense.com",
+      password: rootPasswordHash,
       name: "Alice Admin",
       role: "admin",
       zone: null,
@@ -139,6 +140,7 @@ async function generateSeed() {
     {
       id: nextId("user"),
       email: "operator.a@thermosense.com",
+      password: rootPasswordHash,
       name: "Bob Opérateur",
       role: "operator",
       zone: areaAId,
@@ -146,23 +148,38 @@ async function generateSeed() {
     {
       id: nextId("user"),
       email: "operator.b@thermosense.com",
+      password: rootPasswordHash,
       name: "Claire Opératrice",
       role: "operator",
       zone: areaBId,
     },
     {
       id: nextId("user"),
-      email: "device.sensor@thermosense.com",
-      name: "Device Sensor 01",
-      role: "device",
+      email: "reader.a@thermosense.com",
+      password: rootPasswordHash,
+      name: "Robin Lecteur",
+      role: "reader",
       zone: areaAId,
     },
     {
       id: nextId("user"),
+      email: "device.sensor@thermosense.com",
+      password: rootPasswordHash,
+      name: "Device Sensor 01",
+      role: "device",
+      zone: areaAId,
+      resourceType: "sensor",
+      resourceId: sensors[0].id,
+    },
+    {
+      id: nextId("user"),
       email: "device.actuator@thermosense.com",
+      password: rootPasswordHash,
       name: "Device Actuator 01",
       role: "device",
       zone: areaBId,
+      resourceType: "actuator",
+      resourceId: actuators[2].id,
     },
   ];
 

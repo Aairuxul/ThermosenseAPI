@@ -2,7 +2,6 @@ const jwt = require("jsonwebtoken");
 const net = require("net");
 const path = require("path");
 const { spawn } = require("child_process");
-const { log } = require("console");
 
 const JWT_SECRET = process.env.JWT_SECRET || "thermosense-secret-key-change-in-production";
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "thermosense-api";
@@ -101,17 +100,50 @@ async function stopServerForTests() {
 }
 
 async function request(method, path, { headers = {}, body } = {}) {
+  const requestHeaders = { "Content-Type": "application/json", ...headers };
   const opts = {
     method,
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: requestHeaders,
   };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${baseUrl}${path}`, opts);
+  const url = `${baseUrl}${path}`;
+  const res = await fetch(url, opts);
   const data = await res.json().catch(() => null);
-  return { status: res.status, body: data };
+  return {
+    status: res.status,
+    body: data,
+    request: {
+      method,
+      url,
+      headers: requestHeaders,
+      ...(body !== undefined ? { body } : {}),
+    },
+  };
 }
 
-function report(name, expected, actual, analysis) {
+function formatRequest(requestDetails) {
+  return [
+    "### Requete complete",
+    `Methode : ${requestDetails.method}`,
+    `URL     : ${requestDetails.url}`,
+    `Headers : ${JSON.stringify(requestDetails.headers)}`,
+    `Body    : ${requestDetails.body !== undefined ? JSON.stringify(requestDetails.body) : "(aucun)"}`,
+  ].join("\n");
+}
+
+async function loginAs(email, password = "root") {
+  const res = await request("POST", "/auth/login", {
+    body: { email, password },
+  });
+
+  if (res.status !== 200 || !res.body?.token) {
+    throw new Error(`Login impossible pour ${email}: ${res.status} ${JSON.stringify(res.body)}`);
+  }
+
+  return res.body;
+}
+
+function report(name, expected, actual, analysis, requestDetails) {
   const pass = actual === expected;
   results.push({ name, pass });
   console.log(`\n${"=".repeat(60)}`);
@@ -120,6 +152,9 @@ function report(name, expected, actual, analysis) {
   console.log(`Resultat attendu : ${expected}`);
   console.log(`Resultat obtenu  : ${actual}`);
   console.log(`Status           : ${pass ? "PASS" : "FAIL"}`);
+  if (requestDetails) {
+    console.log(`\n${formatRequest(requestDetails)}`);
+  }
   console.log(`\n### Analyse`);
   console.log(analysis);
 }
@@ -149,6 +184,12 @@ async function run() {
     console.log("\nClaims du token :");
     console.log(JSON.stringify(decoded, null, 2));
 
+    const operatorA = await loginAs("operator.a@thermosense.com");
+    const operatorB = await loginAs("operator.b@thermosense.com");
+    const readerA = await loginAs("reader.a@thermosense.com");
+    const deviceSensor = await loginAs("device.sensor@thermosense.com");
+    const deviceActuator = await loginAs("device.actuator@thermosense.com");
+
     // ============================================================
     // TEST NOMINAL — Requete avec token valide
     // ============================================================
@@ -157,7 +198,6 @@ async function run() {
         headers: { Authorization: `Bearer ${validToken}` },
         body: { buildingId: "building-1", name: "Zone Test AuthN" },
       });
-      console.log("ON EST LA", res);
       report(
         "Test nominal — Requete avec token valide sur POST /areas",
         201,
@@ -167,6 +207,292 @@ async function run() {
           "L'endpoint a cree la ressource et retourne 201 Created.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    // ============================================================
+    // TESTS D'AUTORISATION — MATRICE DES DROITS
+    // ============================================================
+    {
+      const res = await request("GET", "/areas", {
+        headers: { Authorization: `Bearer ${operatorA.token}` },
+      });
+
+      report(
+        "AuthZ — Operator ne voit que sa zone sur GET /areas",
+        "200:area-1",
+        `${res.status}:${(res.body?.data || []).map((area) => area.id).join(",")}`,
+        [
+          "Un operator doit etre filtre sur sa zone.",
+          "La reponse doit contenir uniquement la zone rattachee au token.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/areas", {
+        headers: { Authorization: `Bearer ${readerA.token}` },
+      });
+
+      report(
+        "AuthZ — Reader accede en lecture seule a sa zone sur GET /areas",
+        "200:area-1",
+        `${res.status}:${(res.body?.data || []).map((area) => area.id).join(",")}`,
+        [
+          "Le reader doit conserver un acces de consultation, borne a sa zone.",
+          "Il ne doit pas avoir de visibilite globale.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("POST", "/areas", {
+        headers: { Authorization: `Bearer ${readerA.token}` },
+        body: { buildingId: "building-1", name: "Zone Reader Refuse" },
+      });
+
+      report(
+        "AuthZ — Reader ne peut pas creer une zone",
+        403,
+        res.status,
+        [
+          "Le role reader est strictement en lecture seule.",
+          "La creation d'une zone est reservee a l'administration.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/sensors/sensor-1", {
+        headers: { Authorization: `Bearer ${operatorA.token}` },
+      });
+
+      report(
+        "AuthZ — Operator peut lire un capteur de sa zone",
+        "200:sensor-1",
+        `${res.status}:${res.body?.id}`,
+        [
+          "Un operator peut superviser les capteurs de sa zone.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/sensors/sensor-5", {
+        headers: { Authorization: `Bearer ${operatorA.token}` },
+      });
+
+      report(
+        "AuthZ — Operator ne peut pas lire un capteur d'une autre zone",
+        404,
+        res.status,
+        [
+          "Le controle BOLA doit bloquer l'acces a un capteur hors perimetre.",
+          "La reponse masque ici l'existence de la ressource.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("PUT", "/actuators/actuator-1", {
+        headers: { Authorization: `Bearer ${operatorA.token}` },
+        body: { state: "off" },
+      });
+
+      report(
+        "AuthZ — Operator peut piloter un actionneur de sa zone",
+        "200:off",
+        `${res.status}:${res.body?.state}`,
+        [
+          "Le role operator peut agir sur les actionneurs de sa propre zone.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("PUT", "/actuators/actuator-3", {
+        headers: { Authorization: `Bearer ${operatorA.token}` },
+        body: { state: "off" },
+      });
+
+      report(
+        "AuthZ — Operator ne peut pas piloter un actionneur d'une autre zone",
+        404,
+        res.status,
+        [
+          "Le controle BOLA doit refuser une action hors perimetre.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/sensors/sensor-1", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}` },
+      });
+
+      report(
+        "AuthZ — Device capteur peut lire sa propre ressource",
+        "200:sensor-1",
+        `${res.status}:${res.body?.id}`,
+        [
+          "Le device capteur est borne a sa propre identite technique.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/sensors/sensor-2", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}` },
+      });
+
+      report(
+        "AuthZ — Device capteur ne peut pas lire un autre capteur de la meme zone",
+        404,
+        res.status,
+        [
+          "Le device ne doit pas heriter d'un acces par zone.",
+          "Il est limite a la ressource dont il porte l'identite.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("POST", "/sensors/sensor-1/measures", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}` },
+        body: { timestamp: new Date().toISOString(), value: 21.4 },
+      });
+
+      report(
+        "AuthZ — Device capteur peut publier une mesure sur sa ressource",
+        "201:sensor-1",
+        `${res.status}:${res.body?.sensorId}`,
+        [
+          "Le POST de mesure reste autorise pour le device proprietaire du capteur.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/areas", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}` },
+      });
+
+      report(
+        "AuthZ — Device n'a pas acces a la liste des zones",
+        403,
+        res.status,
+        [
+          "Un device IoT ne doit pas obtenir de visibilite transverse sur le parc.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", "/actuators/actuator-3", {
+        headers: { Authorization: `Bearer ${deviceActuator.token}` },
+      });
+
+      report(
+        "AuthZ — Device actionneur peut lire sa propre ressource",
+        "200:actuator-3",
+        `${res.status}:${res.body?.id}`,
+        [
+          "Le device actionneur doit pouvoir consulter son propre etat si necessaire.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("PUT", "/actuators/actuator-3", {
+        headers: { Authorization: `Bearer ${deviceActuator.token}` },
+        body: { state: "on" },
+      });
+
+      report(
+        "AuthZ — Device actionneur ne peut pas s'auto-commander",
+        403,
+        res.status,
+        [
+          "Un actionneur authentifie ne doit pas pouvoir se donner lui-meme des ordres.",
+          "La route de commande reste reservee a l'admin et a l'operator de zone.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", `/users/${readerA.user.id}`, {
+        headers: { Authorization: `Bearer ${readerA.token}` },
+      });
+
+      report(
+        "AuthZ — Reader peut consulter sa propre fiche utilisateur",
+        `200:${readerA.user.id}`,
+        `${res.status}:${res.body?.id}`,
+        [
+          "Le role reader conserve un acces self-service a son propre profil.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    {
+      const res = await request("GET", `/users/${operatorB.user.id}`, {
+        headers: { Authorization: `Bearer ${readerA.token}` },
+      });
+
+      report(
+        "AuthZ — Reader ne peut pas consulter la fiche d'un autre utilisateur",
+        404,
+        res.status,
+        [
+          "Le controle BOLA sur /users/:id doit limiter l'acces au self-service.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -187,6 +513,8 @@ async function run() {
           "Le code de retour est bien 401 (identite non prouvee), pas 403 (droits insuffisants).",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -215,6 +543,8 @@ async function run() {
           "Un token avec une signature valide mais expire ne doit jamais etre accepte.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -243,6 +573,8 @@ async function run() {
           "Un attaquant ne peut pas forger un token valide sans connaitre le secret.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -264,6 +596,8 @@ async function run() {
           "Cela evite les erreurs 401 quand l'utilisateur copie accidentellement 'Bearer <token>' dans la fenetre Authorize.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -285,6 +619,8 @@ async function run() {
           "Cela couvre le cas ou le token est copie depuis la reponse JSON avec les quotes incluses.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -306,6 +642,8 @@ async function run() {
           "Cela couvre le cas ou seul le fragment JWT est exploitable dans une chaine plus longue.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -333,6 +671,8 @@ async function run() {
           "Un token valide destine a une autre API est correctement rejete.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
 
@@ -351,6 +691,8 @@ async function run() {
           "L'endpoint GET /areas est protege et ne doit pas etre accessible sans token.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
+        ,
+        res.request
       );
     }
   } finally {

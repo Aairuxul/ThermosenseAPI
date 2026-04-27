@@ -2,18 +2,18 @@ const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
-const { filterAreasForUser, requireScope } = require("../authorization");
+const { filterAreasForUser, requireRoles, requireScope } = require("../authorization");
 
 const router = Router();
 
 // GET /areas
-router.get("/", authenticate, requireScope("areas:read"), (req, res) => {
+router.get("/", authenticate, requireScope("areas:read"), requireRoles("admin", "operator", "reader"), (req, res) => {
   const data = filterAreasForUser(req.user);
   res.json({ data });
 });
 
 // POST /areas (protégé)
-router.post("/", authenticate, requireScope("areas:write"), (req, res) => {
+router.post("/", authenticate, requireScope("areas:write"), requireRoles("admin"), (req, res) => {
   const { buildingId, name } = req.body;
   const details = [];
 

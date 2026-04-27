@@ -2,12 +2,12 @@ const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
-const { requireScope, requireSensorAccess } = require("../authorization");
+const { requireRoles, requireScope, requireSensorAccess } = require("../authorization");
 
 const router = Router();
 
 // GET /sensors/:sensorId/measures
-router.get("/:sensorId/measures", authenticate, requireScope("measures:read"), requireSensorAccess, (req, res) => {
+router.get("/:sensorId/measures", authenticate, requireScope("measures:read"), requireRoles("admin", "operator", "reader", "device"), requireSensorAccess, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 99, 499);
   const offset = parseInt(req.query.offset) || 0;
 
@@ -19,7 +19,7 @@ router.get("/:sensorId/measures", authenticate, requireScope("measures:read"), r
 });
 
 // POST /sensors/:sensorId/measures (protégé)
-router.post("/:sensorId/measures", authenticate, requireScope("measures:write"), requireSensorAccess, (req, res) => {
+router.post("/:sensorId/measures", authenticate, requireScope("measures:write"), requireRoles("admin", "device"), requireSensorAccess, (req, res) => {
   const sensor = req.sensor;
 
   if (sensor.status === "inactive") {

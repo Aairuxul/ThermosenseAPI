@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { authenticate } = require("../auth");
-const { requireScope, requireSensorAccess } = require("../authorization");
+const { requireRoles, requireScope, requireSensorAccess } = require("../authorization");
 
 const router = Router();
 
@@ -9,6 +9,7 @@ router.get(
   "/:sensorId",
   authenticate,
   requireScope("sensors:read"),
+  requireRoles("admin", "operator", "reader", "device"),
   requireSensorAccess,
   (req, res) => {
     res.json(req.sensor);

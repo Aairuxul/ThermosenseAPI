@@ -2,12 +2,12 @@ const { Router } = require("express");
 const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
-const { requireScope, requireAreaAccess } = require("../authorization");
+const { requireRoles, requireScope, requireAreaAccess } = require("../authorization");
 
 const router = Router();
 
 // GET /areas/:areaId/alert-thresholds
-router.get("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresholds:read"), requireAreaAccess, (req, res) => {
+router.get("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresholds:read"), requireRoles("admin", "operator", "reader"), requireAreaAccess, (req, res) => {
   const sensorIds = db.sensors
     .filter((s) => s.areaId === req.params.areaId)
     .map((s) => s.id);
@@ -20,7 +20,7 @@ router.get("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresh
 });
 
 // POST /areas/:areaId/alert-thresholds (protégé)
-router.post("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresholds:write"), requireAreaAccess, (req, res) => {
+router.post("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresholds:write"), requireRoles("admin", "operator"), requireAreaAccess, (req, res) => {
 
   const { sensorId, thresholdValue, comparisonOperator } = req.body;
   const details = [];
