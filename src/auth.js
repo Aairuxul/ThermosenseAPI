@@ -14,7 +14,7 @@ function roleToScope(role) {
         case 'admin':
             return 'areas:read areas:write sensors:read sensors:write measures:read measures:write actuators:read actuators:write alert-thresholds:read alert-thresholds:write users:read users:write';
         case 'operator':
-            return 'areas:read sensors:read measures:read actuators:read actuators:write alert-thresholds:read alert-thresholds:write users:read';
+            return 'areas:read sensors:read sensors:write measures:read actuators:read actuators:write alert-thresholds:read alert-thresholds:write users:read';
         case 'reader':
             return 'areas:read sensors:read measures:read actuators:read alert-thresholds:read users:read';
         case 'device':

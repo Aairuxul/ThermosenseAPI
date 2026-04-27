@@ -19,7 +19,7 @@ areaActuatorsRouter.get("/:areaId/actuators", authenticate, requireScope("actuat
 });
 
 // POST /areas/:areaId/actuators (protégé)
-areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actuators:write"), requireRoles("admin"), requireAreaAccess, (req, res) => {
+areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actuators:write"), requireRoles("admin", "operator"), requireAreaAccess, (req, res) => {
 
   const { type, state } = req.body;
   const details = [];
