@@ -22,6 +22,23 @@ function roleToScope(role) {
     }
 }
 
+function normalizeAuthorizationToken(rawToken) {
+    let token = rawToken;
+
+    for (let index = 0; index < 2; index += 1) {
+        token = token.trim();
+        token = token.replace(/^['"]+|['"]+$/g, '').trim();
+        token = token.replace(/^Bearer\s+/i, '').trim();
+    }
+
+    const jwtMatch = token.match(/[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/);
+    if (jwtMatch) {
+        return jwtMatch[0];
+    }
+
+    return token;
+}
+
 /**
  * Middleware d'authentification JWT
  * Vérifie le token Bearer et ajoute req.user
@@ -29,7 +46,7 @@ function roleToScope(role) {
 function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader) {
         logAuth('FAILURE', null, null, 'Missing or malformed Authorization header');
         return res.status(401).json({
             code: 'unauthorized',
@@ -37,7 +54,25 @@ function authenticate(req, res, next) {
         });
     }
 
-    const token = authHeader.substring(7); // Enlever "Bearer "
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+
+    if (!bearerMatch) {
+        logAuth('FAILURE', null, null, 'Missing or malformed Authorization header');
+        return res.status(401).json({
+            code: 'unauthorized',
+            message: "Token d'authentification manquant ou invalide",
+        });
+    }
+
+    const token = normalizeAuthorizationToken(bearerMatch[1]);
+
+    if (!token) {
+        logAuth('FAILURE', null, null, 'Missing token after Bearer prefix');
+        return res.status(401).json({
+            code: 'unauthorized',
+            message: "Token d'authentification manquant ou invalide",
+        });
+    }
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET, {

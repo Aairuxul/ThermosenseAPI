@@ -85,7 +85,42 @@ app.get("/health", (req, res) => {
 // --- Documentation Swagger ---
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "ThermoSense API Documentation"
+  customSiteTitle: "ThermoSense API Documentation",
+  swaggerOptions: {
+    persistAuthorization: true,
+    requestInterceptor: (request) => {
+      if (!request.headers) {
+        return request;
+      }
+
+      const authorizationHeaderName = Object.keys(request.headers)
+        .find((headerName) => headerName.toLowerCase() === "authorization");
+
+      if (!authorizationHeaderName) {
+        return request;
+      }
+
+      let token = String(request.headers[authorizationHeaderName] || "");
+
+      for (let index = 0; index < 2; index += 1) {
+        token = token.trim();
+        token = token.replace(/^Bearer\s+/i, "").trim();
+        token = token.replace(/^['"]+|['"]+$/g, "").trim();
+      }
+
+      const jwtMatch = token.match(/[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/);
+      if (jwtMatch) {
+        token = jwtMatch[0];
+      }
+
+      if (!token) {
+        return request;
+      }
+
+      request.headers[authorizationHeaderName] = `Bearer ${token}`;
+      return request;
+    },
+  },
 }));
 
 // --- Routes publiques ---

@@ -132,6 +132,9 @@ paths:
       summary: Lister toutes les zones
       description: |
         Retourne la liste de toutes les zones enregistrées dans la plateforme.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       responses:
         "200":
           description: Liste des zones.
@@ -192,6 +195,9 @@ paths:
         Retourne les informations détaillées d'un capteur spécifique,
         incluant son type et son statut opérationnel.
         Utilisé par l'application mobile pour superviser un capteur précis.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - name: sensorId
           in: path
@@ -222,6 +228,9 @@ paths:
       summary: Lister les seuils d'alerte d'une zone
       description: |
         Retourne les règles d'alerte configurées pour une zone donnée.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/areaId"
       responses:
@@ -281,6 +290,9 @@ paths:
       description: |
             Retourne les mesures associées à un capteur donné.
             Les résultats sont paginés pour limiter le volume de données transférées.
+            **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - name: sensorId
           in : path
@@ -376,6 +388,9 @@ paths:
       description: |
         Retourne la liste des actionneurs associés à une zone donnée.
         Utilisé pour afficher et gérer les actionneurs d'une zone.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/areaId"
       responses:
@@ -434,7 +449,11 @@ paths:
       tags: [Actuators]
       operationId: getActuator
       summary: Obtenir le détail d'un actionneur
-      description: Retourne les informations détaillées d'un actionneur donné.
+      description: |
+        Retourne les informations détaillées d'un actionneur donné.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/actuatorId"
       responses:
@@ -553,7 +572,11 @@ paths:
       tags: [Users]
       operationId: getUser
       summary: Obtenir le détail d'un utilisateur
-      description: Retourne les informations publiques d'un utilisateur identifié.
+      description: |
+        Retourne les informations publiques d'un utilisateur identifié.
+        **Requiert une authentification.**
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/userId"
       responses:
