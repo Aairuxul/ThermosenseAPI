@@ -4,7 +4,7 @@ const path = require("path");
 
 /**
  * Helper pour mettre à jour automatiquement le fichier OpenAPI
- * Utilisez cette fonction pour ajouter de nouveaux endpoints
+ * Utiliser cette fonction pour ajouter de nouveaux endpoints
  */
 
 const OPENAPI_FILE = path.join(__dirname, "..", "contrat-openapi.yaml");
