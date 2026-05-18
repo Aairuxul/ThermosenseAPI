@@ -639,6 +639,7 @@ paths:
             schema:
               $ref: "#/components/schemas/Actuators"
             example:
+              id: "actuator-3"
               type: "heater"
               state: "off"
               areaId: "area-1"
