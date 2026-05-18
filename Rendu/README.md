@@ -53,18 +53,31 @@ Hypothèses, limites de périmètre et note d'auto-évaluation
 - Limites non couvertes
 - Grille d'auto-évaluation
 
-### 8. [📌 Matrice d'Autorisations (RBAC/BOLA)](matrice_autorisations.md) ⭐
+### 8. [Questions de cadrage](08-questions-cadrage.md)
+Questions de cadrage du projet.
+
+### 9. [Cartographie des vérifications](09-cartographie-verifications.md)
+Cartographie des vérifications d'accès dans l'application.
+
+### 10. [📌 Matrice d'Autorisations (RBAC/BOLA)](10-matrice-autorisations.md) ⭐
 **Contrôle d'accès détaillé par rôle et ressource**
 - Matrice des droits par rôle : Admin, Opérateur, Lecteur, Device IoT
 - Cartographie des vérifications : où et comment valider l'accès
 - Décisions ambiguës et justifications métier
 - Scénarios de refus (403 vs 404), cas limites
 
+### 11. [Note 3 — Architecture SOA/SOAP & Gouvernance API](11-note-3.md) ⭐
+**Livrable complet de la Note 3**
+- L1 — Cartographie système étendu + analyse intégrations + extrait WSDL (`BillingService`) + comparaison REST/SOAP
+- L2 — Réponse à l'audit croisé (7 non-conformités traitées) + score qualité avant/après (4.5/8 → 8/8) + quality gate (Spectral + oasdiff)
+
+Audit associé : `audit/audits-recus/rapport_audit_groupe1.docx` (audit reçu) · `audit/nos-audits/rapport-audit-produit.md` (audit produit par notre groupe).
+
 ---
 
 ## 🔗 Documentation associée
 
-📌 **[Matrice d'Autorisations - RBAC et BOLA](matrice_autorisations.md)** ⭐ **DOCUMENT CLÉS**  
+📌 **[Matrice d'Autorisations - RBAC et BOLA](10-matrice-autorisations.md)** ⭐ **DOCUMENT CLÉS**  
 Contrôle d'accès basé sur les rôles (RBAC) et contrôle au niveau objet (BOLA)
 - ✅ Matrice des droits par rôle (admin, opérateur, lecteur, device)
 - ✅ Cartographie des vérifications (middleware, logique métier)
@@ -77,7 +90,7 @@ Contrôle d'accès basé sur les rôles (RBAC) et contrôle au niveau objet (BOL
 
 - **Lecteur découvrant le projet** : Commencez par [Architecture et Ressources](01-architecture-ressources.md)
 - **Revue des décisions** : Consultez [Décisions de Design](02-decisions-design.md)
-- **Sécurité et autorisations** : 🎯 **[Matrice d'Autorisations](matrice_autorisations.md)** (RBAC/BOLA, cas d'usage, tests)
+- **Sécurité et autorisations** : 🎯 **[Matrice d'Autorisations](10-matrice-autorisations.md)** (RBAC/BOLA, cas d'usage, tests)
 - **Analyse de risques** : Allez à [Threat Model](05-threat-model.md) → [Risques Prioritaires](06-risques-prioritaires.md)
 - **Implémentation** : Référence [Scénarios Critiques](04-scenarios-critiques.md) pour la gestion de cas complexes (Idempotency-Key, ETag)
 - **Validation** : Voir [Évaluation](07-evaluation.md) pour les hypothèses et limites
