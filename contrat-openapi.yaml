@@ -15,9 +15,28 @@ info:
     API de gestion de la plateforme ThermoSense —
     supervision de capteurs et pilotage d'actionneurs pour le confort thermique des bâtiments.
     Le controle d'acces combine des scopes JWT, des restrictions par role et des verifications BOLA sur la zone ou la ressource cible.
+
+    ## Politique de rate limiting
+
+    Les quotas sont appliqués par token JWT et par adresse IP source :
+
+    | Catégorie | Quota | Fenêtre |
+    |---|---|---|
+    | Endpoints de lecture (`GET`) | 120 req | 1 min |
+    | Endpoints d'écriture (`POST`/`PUT`/`DELETE`) | 30 req | 1 min |
+    | Capteurs IoT (`POST /sensors/{id}/measures`) | 600 req | 1 min par capteur |
+    | `POST /auth/login` | 10 req | 5 min par IP |
+
+    En cas de dépassement, l'API renvoie `429 Too Many Requests` avec les headers :
+    - `Retry-After` : secondes avant le prochain appel autorisé.
+    - `X-RateLimit-Limit` : quota total sur la fenêtre.
+    - `X-RateLimit-Remaining` : appels restants.
+    - `X-RateLimit-Reset` : timestamp epoch de la prochaine remise à zéro.
+
+    Un client mobile doit implémenter un **backoff exponentiel** (1s, 2s, 4s, 8s…) plafonné à `Retry-After`.
   contact:
     name: "Support ThermoSense"
-    email: "coucou@test.com"
+    email: "support@thermosense.com"
  
 tags:
   - name: System
@@ -86,11 +105,15 @@ paths:
               properties:
                 email:
                   type: string
-                  example: root
+                  description: |
+                    Email de l'utilisateur. L'identifiant legacy `root` est également
+                    accepté pour le compte d'administration de test.
+                  example: "admin@thermosense.com"
                 password:
                   type: string
                   format: password
-                  example: root
+                  minLength: 4
+                  example: "root"
       responses:
         "200":
           description: Authentification réussie
@@ -98,23 +121,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [token, user]
                 properties:
                   token:
                     type: string
                     description: Token JWT à utiliser dans l'en-tête Authorization
                   user:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      email:
-                        type: string
-                      name:
-                        type: string
-                      role:
-                        type: string
-                        description: Role applicatif attribue a l'identite authentifiee.
-                        enum: [admin, operator, reader, device]
+                    $ref: "#/components/schemas/User"
         "400":
           description: Payload invalide
           content:
@@ -127,6 +140,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /areas:
     get:
@@ -134,38 +149,55 @@ paths:
       operationId: listAreas
       summary: Lister toutes les zones
       description: |
-        Retourne la liste de toutes les zones enregistrées dans la plateforme.
+        Retourne la liste paginée des zones enregistrées dans la plateforme.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`, `reader`
-        
+
         - `admin` : acces a toutes les zones
         - `operator`, `reader` : acces limite a leur zone assignee
       security:
         - BearerAuth: []
       x-required-roles: [admin, operator, reader]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
-          description: Liste des zones.
+          description: Liste paginée des zones.
           content:
             application/json:
               schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Areas"
+                $ref: "#/components/schemas/AreasListResponse"
+              example:
+                data:
+                  - id: "area-1"
+                    name: "Zone A — Entrepôt Nord"
+                    buildingId: "building-1"
+                    sensors:
+                      - id: "sensor-1"
+                        type: "temperature"
+                        status: "active"
+                        areaId: "area-1"
+                pagination:
+                  limit: 50
+                  offset: 0
+                  total: 2
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     post:
       tags: [Areas]
       operationId: createArea
       summary: Créer une zone dans un bâtiment.
       description: |
-        Créer une zone dans un bâtiment spécifique. La zone doit être associée à un 
+        Créer une zone dans un bâtiment spécifique. La zone doit être associée à un
         bâtiment existant.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`
       security:
         - BearerAuth: []
@@ -180,10 +212,16 @@ paths:
               properties:
                 buildingId:
                   type: string
-                  description: Identifiant du bâtiment
+                  pattern: "^building-[0-9]+$"
+                  description: Identifiant du bâtiment (format `building-{n}`).
                 name:
                   type: string
+                  minLength: 1
+                  maxLength: 120
                   description: Nom de la zone
+            example:
+              buildingId: "building-1"
+              name: "Zone C — Atelier Est"
       responses:
         "201":
           description: Création de la zone avec succès
@@ -197,6 +235,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
         
   /sensors/{sensorId}:
     get:
@@ -208,21 +252,16 @@ paths:
         incluant son type et son statut opérationnel.
         Utilisé par l'application mobile pour superviser un capteur précis.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`, `reader`, `device`
-        
+
         - `device` : acces uniquement a son propre capteur
         - `operator`, `reader` : acces limite aux capteurs de leur zone
       security:
         - BearerAuth: []
       x-required-roles: [admin, operator, reader, device]
       parameters:
-        - name: sensorId
-          in: path
-          required: true
-          description: Identifiant unique du capteur.
-          schema:
-            type: string
+        - $ref: "#/components/parameters/sensorId"
       responses:
         "200":
           description: Détail du capteur.
@@ -230,12 +269,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Sensors"
+              example:
+                id: "sensor-1"
+                type: "temperature"
+                status: "active"
+                areaId: "area-1"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Capteur introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
 
 
@@ -245,32 +295,38 @@ paths:
       operationId: listAlertThresholds
       summary: Lister les seuils d'alerte d'une zone
       description: |
-        Retourne les règles d'alerte configurées pour une zone donnée.
+        Retourne la liste paginée des règles d'alerte configurées pour une zone donnée.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`, `reader`
-        
+
         - `operator`, `reader` : acces limite a leur zone assignee
       security:
         - BearerAuth: []
       x-required-roles: [admin, operator, reader]
       parameters:
         - $ref: "#/components/parameters/areaId"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
-          description: Liste des seuils configurés.
+          description: Liste paginée des seuils configurés.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AlertThreshold"
+                $ref: "#/components/schemas/AlertThresholdListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Zone introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
     post:
       tags: [AlertThreshold]
@@ -280,9 +336,9 @@ paths:
         Configure une nouvelle règle d'alerte pour une zone.
         La règle déclenche une alerte si la condition est remplie pendant une durée donnée.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`
-        
+
         - `operator` : acces limite a sa zone assignee
       security:
         - BearerAuth: []
@@ -295,6 +351,10 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/AlertThreshold"
+            example:
+              sensorId: "sensor-1"
+              thresholdValue: 26.5
+              comparisonOperator: "greaterThan"
       responses:
         "201":
           description: Seuil d'alerte créé.
@@ -302,12 +362,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AlertThreshold"
+        "400":
+          description: Payload invalide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Zone introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
 
   /sensors/{sensorId}/measures:
@@ -316,60 +388,72 @@ paths:
       operationId: listMeasurements
       summary: Lister les mesures d'un capteur.
       description: |
-            Retourne les mesures associées à un capteur donné.
-            Les résultats sont paginés pour limiter le volume de données transférées.
-            **Requiert une authentification.**
-            
-            **Roles autorises:** `admin`, `operator`, `reader`, `device`
-            
-            - `device` : acces uniquement a son propre capteur
-            - `operator`, `reader` : acces limite aux capteurs de leur zone
+        Retourne les mesures associées à un capteur donné.
+        Les résultats sont paginés pour limiter le volume de données transférées.
+        **Requiert une authentification.**
+
+        **Roles autorises:** `admin`, `operator`, `reader`, `device`
+
+        - `device` : acces uniquement a son propre capteur
+        - `operator`, `reader` : acces limite aux capteurs de leur zone
+
+        **Filtres optionnels** : `from`/`to` pour restreindre la fenêtre temporelle.
       security:
         - BearerAuth: []
       x-required-roles: [admin, operator, reader, device]
       parameters:
-        - name: sensorId
-          in : path
-          required: true
-          description: Identifiant du capteur.
+        - $ref: "#/components/parameters/sensorId"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - name: from
+          in: query
+          required: false
+          description: Borne basse (incluse) de la fenêtre temporelle, ISO 8601.
           schema:
             type: string
-        - name: limit
+            format: date-time
+            example: "2026-05-18T00:00:00Z"
+        - name: to
           in: query
           required: false
-          description: Nombre maximal de mesures retournées.
+          description: Borne haute (exclue) de la fenêtre temporelle, ISO 8601.
           schema:
-            type: integer
-            minimum: 1
-            maximum: 499
-            default: 99
-        - name: offset
-          in: query
-          required: false
-          description: Position de départ pour la pagination.
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
+            type: string
+            format: date-time
+            example: "2026-05-19T00:00:00Z"
       responses:
         "200":
           description: Liste paginée de mesures.
           content:
             application/json:
               schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Measures"
+                $ref: "#/components/schemas/MeasuresListResponse"
+              example:
+                data:
+                  - id: "measure-1"
+                    sensorId: "sensor-1"
+                    timestamp: "2026-05-18T14:23:05Z"
+                    value: 21.4
+                  - id: "measure-2"
+                    sensorId: "sensor-1"
+                    timestamp: "2026-05-18T14:24:05Z"
+                    value: 21.6
+                pagination:
+                  limit: 50
+                  offset: 0
+                  total: 28
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Capteur introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     post:
       tags: [Measures]
       operationId: createMeasurement
@@ -377,15 +461,21 @@ paths:
       description: |
         Reçoit une mesure et l'associe au capteur indiqué.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `device`
-        
+
         - `device` : acces uniquement a son propre capteur
+
+        **Idempotence obligatoire :** les capteurs IoT en zone à connectivité instable retentent
+        l'envoi en cas de timeout. Le header `Idempotency-Key` est requis pour éviter qu'une
+        même mesure soit enregistrée plusieurs fois et fausse les agrégats (moyennes, alertes)
+        (cf. `components/parameters/IdempotencyKey`).
       security:
         - BearerAuth: []
       x-required-roles: [admin, device]
       parameters:
         - $ref: "#/components/parameters/sensorId"
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -397,11 +487,15 @@ paths:
                 timestamp:
                   type: string
                   format: date-time
+                  example: "2026-05-18T14:23:05Z"
                 value:
                   type: number
+                  example: 21.4
       responses:
         "201":
-          description: Mesure créée.
+          description: |
+            Mesure créée. Si la requête est un rejeu d'une `Idempotency-Key` déjà traitée
+            avec le même body, la mesure existante est renvoyée sans nouvel enregistrement.
           content:
             application/json:
               schema:
@@ -412,12 +506,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "409":
-          description: Capteur indisponible (hors ligne ou inactif).
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Capteur introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            Conflit. Deux cas possibles, distingués par le champ `code` de la réponse :
+            - `idempotencyConflict` : la clé `Idempotency-Key` a déjà été utilisée dans
+              les dernières 24 h avec un body différent.
+            - `sensorUnavailable` : le capteur est hors ligne ou inactif.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Header `Idempotency-Key` absent ou mal formé (format UUID attendu).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /areas/{areaId}/actuators:
     get:
@@ -425,37 +542,53 @@ paths:
       operationId: listActuators
       summary: Lister les actionneurs d'une zone
       description: |
-        Retourne la liste des actionneurs associés à une zone donnée.
+        Retourne la liste paginée des actionneurs associés à une zone donnée.
         Utilisé pour afficher et gérer les actionneurs d'une zone.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`, `reader`
-        
+
         - `operator`, `reader` : acces limite a leur zone assignee
       security:
         - BearerAuth: []
       x-required-roles: [admin, operator, reader]
       parameters:
         - $ref: "#/components/parameters/areaId"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
-          description: Liste des actionneurs
+          description: Liste paginée des actionneurs.
           content:
             application/json:
               schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Actuators"
+                $ref: "#/components/schemas/ActuatorsListResponse"
+              example:
+                data:
+                  - id: "actuator-1"
+                    type: "heater"
+                    state: "on"
+                    areaId: "area-1"
+                  - id: "actuator-2"
+                    type: "ventilation"
+                    state: "auto"
+                    areaId: "area-1"
+                pagination:
+                  limit: 50
+                  offset: 0
+                  total: 2
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Zone introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     post:
       tags: [Actuators]
       operationId: createActuator
@@ -464,7 +597,7 @@ paths:
         Crée un nouvel actionneur et l'associe à la zone spécifiée.
         Les détails de l'actionneur sont fournis dans le corps de la requête.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`
       security:
         - BearerAuth: []
@@ -477,6 +610,10 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/Actuators"
+            example:
+              type: "heater"
+              state: "off"
+              areaId: "area-1"
       responses:
         "201":
           description: Actionneur créé.
@@ -490,6 +627,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Zone introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /actuators/{actuatorId}:
     get:
@@ -499,9 +648,9 @@ paths:
       description: |
         Retourne les informations détaillées d'un actionneur donné.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`, `reader`, `device`
-        
+
         - `device` : acces uniquement a son propre actionneur
         - `operator`, `reader` : acces limite aux actionneurs de leur zone
       security:
@@ -516,12 +665,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Actuators"
+              example:
+                id: "actuator-1"
+                type: "heater"
+                state: "on"
+                areaId: "area-1"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Actionneur introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     put:
       tags: [Actuators]
       operationId: updateActuator
@@ -530,38 +690,81 @@ paths:
         Met à jour l'état ou les propriétés d'un actionneur existant.
         Seules les propriétés fournies dans le corps seront modifiées.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`
-        
+
         - `operator` : acces limite aux actionneurs de sa zone
+
+        **Idempotence obligatoire :** cette opération modifie l'état physique d'un équipement.
+        Le header `Idempotency-Key` est requis pour qu'un client mobile/IoT puisse retenter
+        la requête après timeout sans risquer un double basculement de l'actionneur
+        (cf. `components/parameters/IdempotencyKey`).
       security:
         - BearerAuth: []
       x-required-roles: [admin, operator]
       parameters:
         - $ref: "#/components/parameters/actuatorId"
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [state]
               properties:
                 state:
                   type: string
                   enum: [on, off, auto]
+                  example: on
       responses:
         "200":
-          description: Actionneur mis à jour.
+          description: |
+            Actionneur mis à jour. Si la requête est un rejeu d'une `Idempotency-Key` déjà
+            traitée avec le même body, la réponse mémorisée est renvoyée sans nouvelle exécution.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Actuators"
+              example:
+                id: "actuator-1"
+                type: "heater"
+                state: "on"
+                areaId: "area-1"
         "400":
           description: Payload invalide.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Actionneur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            Conflit d'idempotence : la clé `Idempotency-Key` fournie a déjà été utilisée
+            dans les dernières 24 h avec un body différent. Le client doit générer une
+            nouvelle clé ou rejouer exactement le même payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Header `Idempotency-Key` absent ou mal formé (format UUID attendu).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     delete:
       tags: [Actuators]
       operationId: deleteActuator
@@ -569,7 +772,7 @@ paths:
       description: |
         Supprime l'actionneur identifié par `actuatorId`.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`
       security:
         - BearerAuth: []
@@ -579,12 +782,18 @@ paths:
       responses:
         "204":
           description: Actionneur supprimé.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Actionneur introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /users:
     post:
@@ -594,7 +803,7 @@ paths:
       description: |
         Crée un nouvel utilisateur avec l'email et le nom fournis.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`
       security:
         - BearerAuth: []
@@ -604,32 +813,36 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [email, name]
-              properties:
-                email:
-                  type: string
-                  format: email
-                name:
-                  type: string
+              $ref: "#/components/schemas/UserCreateRequest"
+            example:
+              email: "operator.c@thermosense.com"
+              name: "Camille Opératrice"
+              role: "operator"
       responses:
         "201":
           description: Utilisateur créé.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  email:
-                    type: string
+                $ref: "#/components/schemas/User"
         "400":
           description: Payload invalide.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Email déjà utilisé.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /users/{userId}:
     get:
@@ -639,9 +852,9 @@ paths:
       description: |
         Retourne les informations publiques d'un utilisateur identifié.
         **Requiert une authentification.**
-        
+
         **Roles autorises:** `admin`, `operator`, `reader`
-        
+
         - `admin` : acces a tous les utilisateurs
         - `operator`, `reader` : acces uniquement a leur propre profil
       security:
@@ -655,51 +868,145 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  email:
-                    type: string
-                  name:
-                    type: string
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: Utilisateur introuvable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   
-components:           
+components:
   parameters:
     areaId:
       name: areaId
       in: path
       required: true
-      description: "Identifiant unique de la zone."
+      description: "Identifiant unique de la zone (format `area-{n}`)."
       schema:
         type: string
+        pattern: "^area-[0-9]+$"
+        example: "area-1"
     sensorId:
       name: sensorId
       in: path
       required: true
-      description: "Identifiant unique du capteur."
+      description: "Identifiant unique du capteur (format `sensor-{n}`)."
       schema:
         type: string
+        pattern: "^sensor-[0-9]+$"
+        example: "sensor-1"
     actuatorId:
       name: actuatorId
       in: path
       required: true
-      description: "Identifiant unique de l'actionneur."
+      description: "Identifiant unique de l'actionneur (format `actuator-{n}`)."
       schema:
         type: string
+        pattern: "^actuator-[0-9]+$"
+        example: "actuator-1"
     userId:
       name: userId
       in: path
       required: true
-      description: "Identifiant unique de l'utilisateur."
+      description: "Identifiant unique de l'utilisateur (format `user-{n}`)."
       schema:
         type: string
+        pattern: "^user-[0-9]+$"
+        example: "user-1"
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Clé unique d'idempotence fournie par le client pour sécuriser les retries.
+
+        **Comportement serveur :**
+        - Première requête avec cette clé : la requête est traitée normalement, le résultat (status + body) est mémorisé.
+        - Rejeu de la même clé avec un body **identique** : le serveur renvoie la réponse mémorisée (même status, même body) sans ré-exécuter l'effet de bord.
+        - Rejeu de la même clé avec un body **différent** : `409 Conflict` (la clé est déjà associée à une autre requête).
+        - Clé absente ou mal formée : `422 Unprocessable Entity`.
+
+        **Fenêtre de déduplication :** 24 heures à compter de la première requête. Au-delà, la clé peut être réutilisée.
+
+        **Format recommandé :** UUID v4 généré côté client et persisté jusqu'à confirmation de réception.
+
+        **Pourquoi c'est obligatoire :** un client mobile/IoT en perte réseau retente automatiquement après timeout. Sans cette clé, un retry sur une commande actionneur ou un envoi de mesure crée un doublon (double allumage, mesure dupliquée).
+      schema:
+        type: string
+        format: uuid
+        minLength: 8
+        maxLength: 128
+        example: "a3f1c8e2-5b4d-4f9e-a7c6-1d2e3f4a5b6c"
+    limit:
+      name: limit
+      in: query
+      required: false
+      description: Nombre maximal d'éléments retournés par page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 499
+        default: 50
+    offset:
+      name: offset
+      in: query
+      required: false
+      description: Position de départ pour la pagination (0-indexé).
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  responses:
+    Unauthorized:
+      description: |
+        Token d'authentification absent, invalide ou expiré. Le client doit appeler
+        `POST /auth/login` pour obtenir un nouveau token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: |
+        Token valide mais rôle insuffisant pour cette opération, ou ressource
+        appartenant à une autre zone (vérification BOLA).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: |
+        Quota d'appels dépassé. Voir la politique de rate limiting dans la description globale.
+        Le header `Retry-After` indique le délai (en secondes) avant le prochain appel autorisé.
+      headers:
+        Retry-After:
+          description: Délai en secondes avant un nouvel appel autorisé.
+          schema:
+            type: integer
+            example: 30
+        X-RateLimit-Limit:
+          description: Quota total sur la fenêtre.
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Appels restants sur la fenêtre courante.
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Timestamp epoch (secondes) de remise à zéro du quota.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     
   schemas:
     Areas:
@@ -713,13 +1020,20 @@ components:
       properties:
         id:
           type: string
-          description: "Identifiant unique de la zone."
+          pattern: "^area-[0-9]+$"
+          description: "Identifiant unique de la zone (format `area-{n}`)."
+          example: "area-1"
         name:
           type: string
+          minLength: 1
+          maxLength: 120
           description: "Nom de la zone."
+          example: "Zone A — Entrepôt Nord"
         buildingId:
           type: string
-          description: "Identifiant du bâtiment auquel la zone appartient."
+          pattern: "^building-[0-9]+$"
+          description: "Identifiant du bâtiment auquel la zone appartient (format `building-{n}`)."
+          example: "building-1"
         sensors:
           type: array
           description: "Liste des capteurs présents dans la zone."
@@ -728,7 +1042,7 @@ components:
     Sensors:
       type: object
       description: "Représente un capteur dans une zone."
-      required:  
+      required:
         - id
         - type
         - status
@@ -736,17 +1050,24 @@ components:
       properties:
         id:
           type: string
-          description: "Identifiant unique du capteur."
+          pattern: "^sensor-[0-9]+$"
+          description: "Identifiant unique du capteur (format `sensor-{n}`)."
+          example: "sensor-1"
         type:
           type: string
+          enum: [temperature, humidity]
           description: "Type de capteur."
+          example: "temperature"
         status:
           type: string
-          description: "Statut du capteur (active, inactive, maintenance)."
+          description: "Statut du capteur."
           enum: [active, inactive, maintenance]
+          example: "active"
         areaId:
           type: string
+          pattern: "^area-[0-9]+$"
           description: "Identifiant de la zone à laquelle le capteur appartient."
+          example: "area-1"
     Actuators:
       type: object
       description: "Représente un actionneur dans une zone."
@@ -758,17 +1079,24 @@ components:
       properties:
         id:
           type: string
-          description: "Identifiant unique de l'actionneur."
+          pattern: "^actuator-[0-9]+$"
+          description: "Identifiant unique de l'actionneur (format `actuator-{n}`)."
+          example: "actuator-1"
         type:
           type: string
+          enum: [heater, ventilation]
           description: "Type d'actionneur."
+          example: "heater"
         state:
           type: string
-          description: "État de l'actionneur (on, off, auto)."
+          description: "État de l'actionneur."
           enum: [on, off, auto]
+          example: "on"
         areaId:
           type: string
+          pattern: "^area-[0-9]+$"
           description: "Identifiant de la zone à laquelle l'actionneur appartient."
+          example: "area-1"
     Measures:
       type: object
       description: "Représente une mesure prise par un capteur."
@@ -780,39 +1108,51 @@ components:
       properties:
         id:
           type: string
-          description: "Identifiant unique de la mesure."
+          pattern: "^measure-[0-9]+$"
+          description: "Identifiant unique de la mesure (format `measure-{n}`)."
+          example: "measure-1"
         sensorId:
           type: string
+          pattern: "^sensor-[0-9]+$"
           description: "Identifiant du capteur qui a pris la mesure."
+          example: "sensor-1"
         timestamp:
           type: string
           format: date-time
-          description: "Date et heure de la mesure."
+          description: "Date et heure de la mesure (ISO 8601)."
+          example: "2026-05-18T14:23:05Z"
         value:
           type: number
-          description: "Valeur de la mesure prise par le capteur."
+          description: "Valeur de la mesure prise par le capteur (°C pour temperature, % pour humidity)."
+          example: 21.4
     AlertThreshold:
       type: object
       description: "Représente un seuil d'alerte pour un capteur."
       required:
-        - id
         - sensorId
         - thresholdValue
         - comparisonOperator
       properties:
         id:
           type: string
-          description: "Identifiant unique du seuil d'alerte."
+          pattern: "^threshold-[0-9]+$"
+          description: "Identifiant unique du seuil d'alerte (format `threshold-{n}`). Absent en requête, présent en réponse."
+          example: "threshold-1"
+          readOnly: true
         sensorId:
           type: string
+          pattern: "^sensor-[0-9]+$"
           description: "Identifiant du capteur auquel le seuil d'alerte est associé."
+          example: "sensor-1"
         thresholdValue:
           type: number
           description: "Valeur du seuil d'alerte."
+          example: 30.0
         comparisonOperator:
           type: string
-          description: "Opérateur de comparaison pour le seuil d'alerte (greaterThan, lessThan, equalTo)."
+          description: "Opérateur de comparaison pour le seuil d'alerte."
           enum: [greaterThan, lessThan, equalTo]
+          example: "greaterThan"
     Error:
       type: object
       description: "Représente une erreur dans la plateforme ThermoSense."
@@ -834,6 +1174,105 @@ components:
                 type: string
               reason:
                 type: string
+    PaginationMeta:
+      type: object
+      description: Métadonnées de pagination retournées avec toute liste.
+      required: [limit, offset, total]
+      properties:
+        limit:
+          type: integer
+          description: Nombre maximal d'éléments demandé.
+          example: 50
+        offset:
+          type: integer
+          description: Position de départ utilisée pour cette page.
+          example: 0
+        total:
+          type: integer
+          description: Nombre total d'éléments disponibles côté serveur.
+          example: 1440
+    AreasListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Areas"
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
+    AlertThresholdListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlertThreshold"
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
+    MeasuresListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Measures"
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
+    ActuatorsListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Actuators"
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
+    User:
+      type: object
+      description: "Utilisateur de la plateforme ThermoSense."
+      required: [id, email, role]
+      properties:
+        id:
+          type: string
+          pattern: "^user-[0-9]+$"
+          description: Identifiant unique de l'utilisateur (format `user-{n}`).
+          example: "user-2"
+        email:
+          type: string
+          description: |
+            Email de l'utilisateur. Pour les comptes créés via `POST /users`,
+            le format email standard est validé. Le compte d'administration
+            historique `root` est conservé pour compatibilité.
+          example: "admin@thermosense.com"
+        name:
+          type: string
+          description: Nom affiché.
+          example: "Alice Admin"
+        role:
+          type: string
+          enum: [admin, operator, reader, device]
+          description: Rôle applicatif attribué à l'utilisateur.
+    UserCreateRequest:
+      type: object
+      required: [email, name]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email de l'utilisateur.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Nom affiché.
+        role:
+          type: string
+          enum: [admin, operator, reader, device]
+          description: Rôle applicatif (par défaut `reader`).
   
   securitySchemes:
     BearerAuth:
