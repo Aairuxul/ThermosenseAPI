@@ -41,37 +41,132 @@
         </xsd:restriction>
       </xsd:simpleType>
 
+      <!-- Identifiants typés (pattern + longueur bornée) -->
+      <xsd:simpleType name="ClientId">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="CLI-[0-9]{6,10}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="ContractNumber">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="CTR-[0-9]{4}-[0-9]{4,6}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="InvoiceNumber">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="INV-[0-9]{4}-[0-9]{6,8}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="SensorId">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="sensor-[0-9]+"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="AreaId">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="area-[0-9]+"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="EquipmentId">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="(actuator|sensor)-[0-9]+"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="EventId">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="(measure|threshold|maintenance)-[0-9]+"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="CurrencyCode">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="[A-Z]{3}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="UnitOfMeasure">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="CELSIUS"/>
+          <xsd:enumeration value="PERCENT"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- Montants et grandeurs typés -->
+      <xsd:simpleType name="NonNegativeAmount">
+        <xsd:restriction base="xsd:decimal">
+          <xsd:minInclusive value="0"/>
+          <xsd:fractionDigits value="2"/>
+          <xsd:totalDigits value="14"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="PositiveQuantity">
+        <xsd:restriction base="xsd:decimal">
+          <xsd:minExclusive value="0"/>
+          <xsd:fractionDigits value="4"/>
+          <xsd:totalDigits value="14"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="MeasurementValue">
+        <xsd:restriction base="xsd:decimal">
+          <xsd:minInclusive value="-100"/>
+          <xsd:maxInclusive value="200"/>
+          <xsd:fractionDigits value="2"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="DurationMinutes">
+        <xsd:restriction base="xsd:int">
+          <xsd:minInclusive value="1"/>
+          <xsd:maxInclusive value="100000"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="ShortDescription">
+        <xsd:restriction base="xsd:string">
+          <xsd:minLength value="1"/>
+          <xsd:maxLength value="500"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
       <!-- Événements de seuil -->
       <xsd:complexType name="ThresholdEvent">
         <xsd:sequence>
-          <xsd:element name="sensorId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="sensorId" type="tns:SensorId" minOccurs="1"/>
           <xsd:element name="thresholdType" type="tns:ThresholdType" minOccurs="1"/>
           <xsd:element name="timestamp" type="xsd:dateTime" minOccurs="1"/>
-          <xsd:element name="measurementValue" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="thresholdValue" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="unitOfMeasure" type="xsd:string" minOccurs="1"/>
-          <xsd:element name="areaId" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="measurementValue" type="tns:MeasurementValue" minOccurs="1"/>
+          <xsd:element name="thresholdValue" type="tns:MeasurementValue" minOccurs="1"/>
+          <xsd:element name="unitOfMeasure" type="tns:UnitOfMeasure" minOccurs="1"/>
+          <xsd:element name="areaId" type="tns:AreaId" minOccurs="0"/>
         </xsd:sequence>
       </xsd:complexType>
 
       <!-- Événements de maintenance -->
       <xsd:complexType name="MaintenanceEvent">
         <xsd:sequence>
-          <xsd:element name="equipmentId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="equipmentId" type="tns:EquipmentId" minOccurs="1"/>
           <xsd:element name="maintenanceType" type="tns:MaintenanceType" minOccurs="1"/>
           <xsd:element name="timestamp" type="xsd:dateTime" minOccurs="1"/>
-          <xsd:element name="durationMinutes" type="xsd:int" minOccurs="1"/>
-          <xsd:element name="costEstimateEur" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="technician" type="xsd:string" minOccurs="0"/>
-          <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="durationMinutes" type="tns:DurationMinutes" minOccurs="1"/>
+          <xsd:element name="costEstimateEur" type="tns:NonNegativeAmount" minOccurs="1"/>
+          <xsd:element name="technician" type="tns:ShortDescription" minOccurs="0"/>
+          <xsd:element name="description" type="tns:ShortDescription" minOccurs="0"/>
         </xsd:sequence>
       </xsd:complexType>
 
       <!-- Contexte client/contrat -->
       <xsd:complexType name="BillingContext">
         <xsd:sequence>
-          <xsd:element name="clientId" type="xsd:string" minOccurs="1"/>
-          <xsd:element name="contractNumber" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="clientId" type="tns:ClientId" minOccurs="1"/>
+          <xsd:element name="contractNumber" type="tns:ContractNumber" minOccurs="1"/>
           <xsd:element name="billingCycleStart" type="xsd:date" minOccurs="1"/>
           <xsd:element name="billingCycleEnd" type="xsd:date" minOccurs="1"/>
         </xsd:sequence>
@@ -80,14 +175,14 @@
       <!-- Ligne de facturation -->
       <xsd:complexType name="InvoiceLine">
         <xsd:sequence>
-          <xsd:element name="lineNumber" type="xsd:int" minOccurs="1"/>
-          <xsd:element name="description" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="lineNumber" type="xsd:positiveInteger" minOccurs="1"/>
+          <xsd:element name="description" type="tns:ShortDescription" minOccurs="1"/>
           <xsd:element name="eventType" type="xsd:string" minOccurs="1"/>
-          <xsd:element name="eventId" type="xsd:string" minOccurs="1"/>
-          <xsd:element name="quantity" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="unitPrice" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="totalAmount" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="currency" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="eventId" type="tns:EventId" minOccurs="1"/>
+          <xsd:element name="quantity" type="tns:PositiveQuantity" minOccurs="1"/>
+          <xsd:element name="unitPrice" type="tns:NonNegativeAmount" minOccurs="1"/>
+          <xsd:element name="totalAmount" type="tns:NonNegativeAmount" minOccurs="1"/>
+          <xsd:element name="currency" type="tns:CurrencyCode" minOccurs="1"/>
           <xsd:element name="eventTimestamp" type="xsd:dateTime" minOccurs="1"/>
         </xsd:sequence>
       </xsd:complexType>
@@ -95,9 +190,9 @@
       <!-- Facture complète -->
       <xsd:complexType name="Invoice">
         <xsd:sequence>
-          <xsd:element name="invoiceNumber" type="xsd:string" minOccurs="1"/>
-          <xsd:element name="clientId" type="xsd:string" minOccurs="1"/>
-          <xsd:element name="contractNumber" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="invoiceNumber" type="tns:InvoiceNumber" minOccurs="1"/>
+          <xsd:element name="clientId" type="tns:ClientId" minOccurs="1"/>
+          <xsd:element name="contractNumber" type="tns:ContractNumber" minOccurs="1"/>
           <xsd:element name="status" type="tns:InvoiceStatus" minOccurs="1"/>
           <xsd:element name="creationDate" type="xsd:dateTime" minOccurs="1"/>
           <xsd:element name="billingPeriodStart" type="xsd:date" minOccurs="1"/>
@@ -109,9 +204,9 @@
               </xsd:sequence>
             </xsd:complexType>
           </xsd:element>
-          <xsd:element name="totalAmount" type="xsd:decimal" minOccurs="1"/>
-          <xsd:element name="totalTax" type="xsd:decimal" minOccurs="0"/>
-          <xsd:element name="currency" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="totalAmount" type="tns:NonNegativeAmount" minOccurs="1"/>
+          <xsd:element name="totalTax" type="tns:NonNegativeAmount" minOccurs="0"/>
+          <xsd:element name="currency" type="tns:CurrencyCode" minOccurs="1"/>
         </xsd:sequence>
       </xsd:complexType>
 
@@ -158,23 +253,36 @@
           <xsd:sequence>
             <xsd:element name="success" type="xsd:boolean" minOccurs="1"/>
             <xsd:element name="invoice" type="tns:Invoice" minOccurs="0"/>
-            <xsd:element name="invoiceNumber" type="xsd:string" minOccurs="0"/>
-            <xsd:element name="message" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="invoiceNumber" type="tns:InvoiceNumber" minOccurs="0"/>
+            <xsd:element name="message" type="tns:ShortDescription" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
 
       <!-- OPÉRATION 2 : GetInvoices -->
-      
+
+      <xsd:simpleType name="MaxResultsRange">
+        <xsd:restriction base="xsd:int">
+          <xsd:minInclusive value="1"/>
+          <xsd:maxInclusive value="500"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="TotalCount">
+        <xsd:restriction base="xsd:int">
+          <xsd:minInclusive value="0"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
       <xsd:element name="GetInvoicesRequest">
         <xsd:complexType>
           <xsd:sequence>
-            <xsd:element name="clientId" type="xsd:string" minOccurs="1"/>
-            <xsd:element name="contractNumber" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="clientId" type="tns:ClientId" minOccurs="1"/>
+            <xsd:element name="contractNumber" type="tns:ContractNumber" minOccurs="0"/>
             <xsd:element name="startDate" type="xsd:date" minOccurs="0"/>
             <xsd:element name="endDate" type="xsd:date" minOccurs="0"/>
             <xsd:element name="status" type="tns:InvoiceStatus" minOccurs="0"/>
-            <xsd:element name="maxResults" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="maxResults" type="tns:MaxResultsRange" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
@@ -190,8 +298,8 @@
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
-            <xsd:element name="totalCount" type="xsd:int" minOccurs="0"/>
-            <xsd:element name="message" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="totalCount" type="tns:TotalCount" minOccurs="0"/>
+            <xsd:element name="message" type="tns:ShortDescription" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>

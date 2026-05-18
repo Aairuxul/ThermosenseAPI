@@ -100,16 +100,20 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [status, message, database]
                 properties:
                   status:
                     type: string
-                    example: ok
+                    enum: [ok, degraded]
                   message:
                     type: string
-                    example: API is running
                   database:
                     type: string
-                    example: initialized
+                    enum: [initialized, initializing, unavailable]
+              example:
+                status: "ok"
+                message: "API is running"
+                database: "initialized"
 
   /auth/login:
     post:
@@ -156,6 +160,13 @@ paths:
                     description: Token JWT à utiliser dans l'en-tête Authorization
                   user:
                     $ref: "#/components/schemas/User"
+              example:
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTIifQ.signature"
+                user:
+                  id: "user-2"
+                  email: "admin@thermosense.com"
+                  name: "Alice Admin"
+                  role: "admin"
         "400":
           description: Payload invalide
           content:
@@ -257,6 +268,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Areas"
+              example:
+                id: "area-3"
+                name: "Zone C — Atelier Est"
+                buildingId: "building-1"
+                sensors: []
         "400":
           description: Payload invalide (buildingId et/ou name manquant)
           content:
@@ -343,6 +359,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AlertThresholdListResponse"
+              example:
+                data:
+                  - id: "threshold-1"
+                    sensorId: "sensor-1"
+                    thresholdValue: 30.0
+                    comparisonOperator: "greaterThan"
+                  - id: "threshold-2"
+                    sensorId: "sensor-1"
+                    thresholdValue: 10.0
+                    comparisonOperator: "lessThan"
+                pagination:
+                  limit: 50
+                  offset: 0
+                  total: 2
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -390,6 +420,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AlertThreshold"
+              example:
+                id: "threshold-4"
+                sensorId: "sensor-1"
+                thresholdValue: 26.5
+                comparisonOperator: "greaterThan"
         "400":
           description: Payload invalide.
           content:
@@ -528,6 +563,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Measures"
+              example:
+                id: "measure-29"
+                sensorId: "sensor-1"
+                timestamp: "2026-05-18T14:23:05Z"
+                value: 21.4
         "400":
           description: Payload invalide.
           content:
@@ -650,6 +690,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Actuators"
+              example:
+                id: "actuator-5"
+                type: "heater"
+                state: "off"
+                areaId: "area-1"
         "400":
           description: Payload invalide.
           content:
@@ -854,6 +899,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+              example:
+                id: "user-8"
+                email: "operator.c@thermosense.com"
+                name: "Camille Opératrice"
+                role: "operator"
         "400":
           description: Payload invalide.
           content:
@@ -898,6 +948,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+              example:
+                id: "user-3"
+                email: "operator.a@thermosense.com"
+                name: "Bob Opérateur"
+                role: "operator"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
