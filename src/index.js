@@ -27,10 +27,10 @@ const swaggerDocument = YAML.load(path.join(__dirname, "..", "contrat-openapi.ya
 if (process.env.NODE_ENV !== 'production') {
   // En dev, mettre localhost en premier
   const localhostServer = {
-    url: `http://localhost:${PORT}`,
+    url: `http://localhost:${PORT}/v1`,
     description: "Serveur de développement local"
   };
-  
+
   // Retirer l'ancien localhost s'il existe et ajouter le nouveau avec le bon port
   swaggerDocument.servers = [
     localhostServer,
@@ -73,16 +73,18 @@ const apiLimiter = rateLimit({
   },
 });
 
-// --- Health check ---
-app.get("/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
+// --- Health check (versionné + alias non-versionné pour les load balancers) ---
+const healthHandler = (req, res) => {
+  res.json({
+    status: "ok",
     message: "API is running",
     database: "initialized"
   });
-});
+};
+app.get("/v1/health", healthHandler);
+app.get("/health", healthHandler);
 
-// --- Documentation Swagger ---
+// --- Documentation Swagger (non versionnée) ---
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: "ThermoSense API Documentation",
@@ -123,18 +125,18 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   },
 }));
 
-// --- Routes publiques ---
-app.use("/auth", loginLimiter, authRouter);
+// --- Routes publiques (versionnées sous /v1) ---
+app.use("/v1/auth", loginLimiter, authRouter);
 
-// --- Routes protégées ---
+// --- Routes protégées (versionnées sous /v1) ---
 // Rate limiting global + BOLA/BFLA via middleware d'authentification et d'autorisation
-app.use("/areas", apiLimiter, areasRouter);
-app.use("/sensors", apiLimiter, sensorsRouter);
-app.use("/sensors", apiLimiter, measuresRouter);
-app.use("/areas", apiLimiter, alertThresholdsRouter);
-app.use("/areas", apiLimiter, areaActuatorsRouter);
-app.use("/actuators", apiLimiter, actuatorsRouter);
-app.use("/users", apiLimiter, usersRouter);
+app.use("/v1/areas", apiLimiter, areasRouter);
+app.use("/v1/sensors", apiLimiter, sensorsRouter);
+app.use("/v1/sensors", apiLimiter, measuresRouter);
+app.use("/v1/areas", apiLimiter, alertThresholdsRouter);
+app.use("/v1/areas", apiLimiter, areaActuatorsRouter);
+app.use("/v1/actuators", apiLimiter, actuatorsRouter);
+app.use("/v1/users", apiLimiter, usersRouter);
 
 // 404 pour les routes non définies
 app.use((req, res) => {

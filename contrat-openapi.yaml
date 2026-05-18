@@ -1,7 +1,7 @@
 openapi: "3.0.3"
 
 servers:
-  - url: "http://localhost:3000"
+  - url: "http://localhost:3000/v1"
     description: "Serveur de développement local"
   - url: "https://staging-api.thermosense.com/v1"
     description: "Serveur de staging pour tests"
@@ -10,22 +10,50 @@ servers:
 
 info:
   title: ThermoSense API
-  version: "0.1.0"
+  version: "1.0.0"
   description: |
     API de gestion de la plateforme ThermoSense —
     supervision de capteurs et pilotage d'actionneurs pour le confort thermique des bâtiments.
     Le controle d'acces combine des scopes JWT, des restrictions par role et des verifications BOLA sur la zone ou la ressource cible.
 
+    ## Versioning et politique d'évolution
+
+    **Stratégie :** versioning par **préfixe d'URI** (`/v1`, `/v2`, ...). Tous les environnements
+    (local, staging, production) servent la version courante sous `/v1`. Le numéro majeur
+    de l'URI est synchronisé avec le `version` SemVer ci-dessus.
+
+    **Compatibilité ascendante au sein d'une majeure (`/v1`)** : les évolutions suivantes
+    sont considérées **non-breaking** et peuvent être publiées sans nouvelle version :
+    - Ajout d'un endpoint, d'un champ optionnel en réponse, d'un nouvel `enum` toléré
+      par le client (les clients doivent ignorer les champs inconnus).
+    - Ajout d'un paramètre de requête optionnel.
+    - Ajout d'un nouveau code HTTP 2xx documenté à l'avance.
+
+    Sont considérées **breaking** et nécessitent `/v2` :
+    - Suppression ou renommage d'un endpoint, champ, ou valeur d'`enum`.
+    - Changement du type d'un champ ou rendu obligatoire d'un champ optionnel.
+    - Modification de la sémantique d'un code HTTP existant.
+
+    **Politique de deprecation :** un endpoint ou un champ marqué `deprecated: true`
+    dans cette spec reste fonctionnel **6 mois minimum** avant retrait dans la version
+    majeure suivante. Le header `Sunset` (RFC 8594) annonce la date de retrait sur
+    chaque réponse concernée.
+
+    **Sources de vérité :** ce fichier OpenAPI (`contrat-openapi.yaml`) au commit indiqué
+    par `info.version`. Toute modification breaking sans bump de version majeure
+    est un bug à signaler.
+
     ## Politique de rate limiting
 
-    Les quotas sont appliqués par token JWT et par adresse IP source :
+    Les quotas sont appliqués par adresse IP source :
 
     | Catégorie | Quota | Fenêtre |
     |---|---|---|
-    | Endpoints de lecture (`GET`) | 120 req | 1 min |
-    | Endpoints d'écriture (`POST`/`PUT`/`DELETE`) | 30 req | 1 min |
-    | Capteurs IoT (`POST /sensors/{id}/measures`) | 600 req | 1 min par capteur |
-    | `POST /auth/login` | 10 req | 5 min par IP |
+    | Routes API (toutes sauf `/auth/login`) | 100 req | 1 min |
+    | `POST /auth/login` | 10 req | 15 min par IP |
+
+    **Évolution prévue (`/v2`)** : différenciation des quotas par rôle (lectures vs écritures,
+    quota dédié pour les capteurs IoT) et application par token JWT en plus de l'IP.
 
     En cas de dépassement, l'API renvoie `429 Too Many Requests` avec les headers :
     - `Retry-After` : secondes avant le prochain appel autorisé.
@@ -131,13 +159,13 @@ paths:
         "400":
           description: Payload invalide
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
           description: Email ou mot de passe incorrect
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -232,7 +260,7 @@ paths:
         "400":
           description: Payload invalide (buildingId et/ou name manquant)
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
@@ -281,7 +309,7 @@ paths:
         "404":
           description: Capteur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -322,7 +350,7 @@ paths:
         "404":
           description: Zone introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -365,7 +393,7 @@ paths:
         "400":
           description: Payload invalide.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
@@ -375,7 +403,7 @@ paths:
         "404":
           description: Zone introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -449,7 +477,7 @@ paths:
         "404":
           description: Capteur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -503,7 +531,7 @@ paths:
         "400":
           description: Payload invalide.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
@@ -513,7 +541,7 @@ paths:
         "404":
           description: Capteur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
@@ -523,14 +551,14 @@ paths:
               les dernières 24 h avec un body différent.
             - `sensorUnavailable` : le capteur est hors ligne ou inactif.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "422":
           description: |
             Header `Idempotency-Key` absent ou mal formé (format UUID attendu).
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -584,7 +612,7 @@ paths:
         "404":
           description: Zone introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -624,7 +652,7 @@ paths:
         "400":
           description: Payload invalide.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
@@ -634,7 +662,7 @@ paths:
         "404":
           description: Zone introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -677,7 +705,7 @@ paths:
         "404":
           description: Actionneur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -734,7 +762,7 @@ paths:
         "400":
           description: Payload invalide.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
@@ -744,7 +772,7 @@ paths:
         "404":
           description: Actionneur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
@@ -753,14 +781,14 @@ paths:
             dans les dernières 24 h avec un body différent. Le client doit générer une
             nouvelle clé ou rejouer exactement le même payload.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "422":
           description: |
             Header `Idempotency-Key` absent ou mal formé (format UUID attendu).
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -789,7 +817,7 @@ paths:
         "404":
           description: Actionneur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -828,7 +856,7 @@ paths:
         "400":
           description: Payload invalide.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
@@ -838,7 +866,7 @@ paths:
         "409":
           description: Email déjà utilisé.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -876,7 +904,7 @@ paths:
         "404":
           description: Utilisateur introuvable.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
@@ -970,17 +998,30 @@ components:
         Token d'authentification absent, invalide ou expiré. Le client doit appeler
         `POST /auth/login` pour obtenir un nouveau token.
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            type: "about:blank"
+            title: "Unauthorized"
+            status: 401
+            detail: "Token JWT manquant ou expiré."
+            code: "unauthorized"
     Forbidden:
       description: |
         Token valide mais rôle insuffisant pour cette opération, ou ressource
         appartenant à une autre zone (vérification BOLA).
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            type: "about:blank"
+            title: "Forbidden"
+            status: 403
+            detail: "Le rôle `reader` n'autorise pas la modification d'actionneurs."
+            instance: "/actuators/actuator-1"
+            code: "forbidden"
     TooManyRequests:
       description: |
         Quota d'appels dépassé. Voir la politique de rate limiting dans la description globale.
@@ -1004,9 +1045,15 @@ components:
           schema:
             type: integer
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            type: "https://thermosense.com/errors/rate-limit"
+            title: "Too Many Requests"
+            status: 429
+            detail: "Quota de 120 req/min dépassé sur les endpoints de lecture."
+            code: "rateLimitExceeded"
     
   schemas:
     Areas:
@@ -1155,25 +1202,71 @@ components:
           example: "greaterThan"
     Error:
       type: object
-      description: "Représente une erreur dans la plateforme ThermoSense."
-      required: [code, message]
+      description: |
+        Réponse d'erreur au format **Problem Details for HTTP APIs (RFC 7807)**.
+
+        Les réponses d'erreur de l'API ThermoSense sont servies avec le media type
+        `application/problem+json`. Les clients doivent traiter ce format quel que soit
+        le code HTTP non-2xx retourné.
+
+        **Extensions ThermoSense** (au-dessus de RFC 7807) :
+        - `code` : identifiant machine-readable de l'erreur métier (`sensorUnavailable`,
+          `idempotencyConflict`, `invalidParameter`, etc.) — stable, utilisable pour le routing
+          côté client.
+        - `errors` : liste des erreurs de validation par champ, présente sur les `400`/`422`.
+      required: [type, title, status]
       properties:
+        type:
+          type: string
+          format: uri-reference
+          description: |
+            URI de référence identifiant le type d'erreur. Utiliser `about:blank`
+            quand le code HTTP suffit à identifier la cause.
+          example: "https://thermosense.com/errors/sensor-unavailable"
+          default: "about:blank"
+        title:
+          type: string
+          description: Résumé court et stable (ne change pas d'une occurrence à l'autre).
+          example: "Sensor unavailable"
+        status:
+          type: integer
+          description: Code HTTP, dupliqué ici pour faciliter le logging côté client.
+          minimum: 400
+          maximum: 599
+          example: 409
+        detail:
+          type: string
+          description: Explication contextuelle propre à cette occurrence.
+          example: "Le capteur sensor-1 est hors-ligne depuis 2026-05-18T13:00:00Z."
+        instance:
+          type: string
+          format: uri-reference
+          description: URI identifiant l'occurrence (typiquement le chemin appelé).
+          example: "/sensors/sensor-1/measures"
         code:
           type: string
-          description: Code d'erreur machine-readable (ex "invalidParameter")
-        message:
-          type: string
-          description: Message d'erreur lisible pour le développeur
-        details:
+          description: |
+            Code d'erreur métier stable (extension ThermoSense).
+            Exemples : `invalidParameter`, `sensorUnavailable`, `idempotencyConflict`,
+            `idempotencyKeyMissing`, `rateLimitExceeded`, `forbidden`, `unauthorized`.
+          example: "sensorUnavailable"
+        errors:
           type: array
-          description: Détails supplémentaires (erreurs de validation par champ)
+          description: |
+            Erreurs de validation par champ (extension ThermoSense),
+            présentes sur les réponses `400` et `422`.
           items:
             type: object
+            required: [field, reason]
             properties:
               field:
                 type: string
+                description: Chemin du champ en erreur (notation pointée).
+                example: "thresholdValue"
               reason:
                 type: string
+                description: Raison de l'erreur pour ce champ.
+                example: "doit être strictement positif"
     PaginationMeta:
       type: object
       description: Métadonnées de pagination retournées avec toute liste.

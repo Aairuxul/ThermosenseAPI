@@ -90,6 +90,8 @@ async function stopServerForTests() {
     await Promise.race([new Promise((resolve) => processToStop.once('exit', resolve)), delay(3000)]);
 }
 
+const API_PREFIX = '/v1';
+
 async function request(method, routePath, { headers = {}, body } = {}) {
     const requestHeaders = { 'Content-Type': 'application/json', ...headers };
     const opts = {
@@ -101,7 +103,11 @@ async function request(method, routePath, { headers = {}, body } = {}) {
         opts.body = JSON.stringify(body);
     }
 
-    const url = `${baseUrl}${routePath}`;
+    // Préfixe automatique /v1 sauf pour /health et /api-docs.
+    const versionedPath = routePath.startsWith('/health') || routePath.startsWith('/api-docs')
+        ? routePath
+        : `${API_PREFIX}${routePath}`;
+    const url = `${baseUrl}${versionedPath}`;
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => null);
 

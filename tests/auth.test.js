@@ -99,6 +99,8 @@ async function stopServerForTests() {
   ]);
 }
 
+const API_PREFIX = "/v1";
+
 async function request(method, path, { headers = {}, body } = {}) {
   const requestHeaders = { "Content-Type": "application/json", ...headers };
   const opts = {
@@ -106,7 +108,11 @@ async function request(method, path, { headers = {}, body } = {}) {
     headers: requestHeaders,
   };
   if (body) opts.body = JSON.stringify(body);
-  const url = `${baseUrl}${path}`;
+  // Préfixe automatique /v1 sauf pour les routes hors versioning (/health, /api-docs).
+  const versionedPath = path.startsWith("/health") || path.startsWith("/api-docs")
+    ? path
+    : `${API_PREFIX}${path}`;
+  const url = `${baseUrl}${versionedPath}`;
   const res = await fetch(url, opts);
   const data = await res.json().catch(() => null);
   return {
