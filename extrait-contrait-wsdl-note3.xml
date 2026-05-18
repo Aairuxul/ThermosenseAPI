@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:tns="http://thermosense.internal/billing/2026-05"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+             targetNamespace="http://thermosense.internal/billing/2026-05"
+             name="BillingService">
+
+  <!-- ============================================
+       TYPES : Définition des structures de données
+       ============================================ -->
+  <types>
+    <xsd:schema targetNamespace="http://thermosense.internal/billing/2026-05"
+                elementFormDefault="qualified">
+
+      <!-- Types énumérés -->
+      <xsd:simpleType name="ThresholdType">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="TEMPERATURE_HIGH"/>
+          <xsd:enumeration value="TEMPERATURE_LOW"/>
+          <xsd:enumeration value="HUMIDITY_HIGH"/>
+          <xsd:enumeration value="HUMIDITY_LOW"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="MaintenanceType">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="PREVENTIVE"/>
+          <xsd:enumeration value="CORRECTIVE"/>
+          <xsd:enumeration value="EMERGENCY"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="InvoiceStatus">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="DRAFT"/>
+          <xsd:enumeration value="VALIDATED"/>
+          <xsd:enumeration value="ARCHIVED"/>
+          <xsd:enumeration value="PAID"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- Événements de seuil -->
+      <xsd:complexType name="ThresholdEvent">
+        <xsd:sequence>
+          <xsd:element name="sensorId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="thresholdType" type="tns:ThresholdType" minOccurs="1"/>
+          <xsd:element name="timestamp" type="xsd:dateTime" minOccurs="1"/>
+          <xsd:element name="measurementValue" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="thresholdValue" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="unitOfMeasure" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="areaId" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Événements de maintenance -->
+      <xsd:complexType name="MaintenanceEvent">
+        <xsd:sequence>
+          <xsd:element name="equipmentId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="maintenanceType" type="tns:MaintenanceType" minOccurs="1"/>
+          <xsd:element name="timestamp" type="xsd:dateTime" minOccurs="1"/>
+          <xsd:element name="durationMinutes" type="xsd:int" minOccurs="1"/>
+          <xsd:element name="costEstimateEur" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="technician" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Contexte client/contrat -->
+      <xsd:complexType name="BillingContext">
+        <xsd:sequence>
+          <xsd:element name="clientId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="contractNumber" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="billingCycleStart" type="xsd:date" minOccurs="1"/>
+          <xsd:element name="billingCycleEnd" type="xsd:date" minOccurs="1"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Ligne de facturation -->
+      <xsd:complexType name="InvoiceLine">
+        <xsd:sequence>
+          <xsd:element name="lineNumber" type="xsd:int" minOccurs="1"/>
+          <xsd:element name="description" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="eventType" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="eventId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="quantity" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="unitPrice" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="totalAmount" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="currency" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="eventTimestamp" type="xsd:dateTime" minOccurs="1"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Facture complète -->
+      <xsd:complexType name="Invoice">
+        <xsd:sequence>
+          <xsd:element name="invoiceNumber" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="clientId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="contractNumber" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="status" type="tns:InvoiceStatus" minOccurs="1"/>
+          <xsd:element name="creationDate" type="xsd:dateTime" minOccurs="1"/>
+          <xsd:element name="billingPeriodStart" type="xsd:date" minOccurs="1"/>
+          <xsd:element name="billingPeriodEnd" type="xsd:date" minOccurs="1"/>
+          <xsd:element name="invoiceLines" minOccurs="1">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="line" type="tns:InvoiceLine" maxOccurs="unbounded"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="totalAmount" type="xsd:decimal" minOccurs="1"/>
+          <xsd:element name="totalTax" type="xsd:decimal" minOccurs="0"/>
+          <xsd:element name="currency" type="xsd:string" minOccurs="1"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Messages d'erreur -->
+      <xsd:complexType name="FaultDetail">
+        <xsd:sequence>
+          <xsd:element name="faultCode" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="faultMessage" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="timestamp" type="xsd:dateTime" minOccurs="1"/>
+          <xsd:element name="transactionId" type="xsd:string" minOccurs="1"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- ======================================
+           MESSAGES REQUEST/RESPONSE
+           ====================================== -->
+
+      <!-- OPÉRATION 1 : GenerateInvoice -->
+      
+      <xsd:element name="GenerateInvoiceRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="billingContext" type="tns:BillingContext" minOccurs="1"/>
+            <xsd:element name="thresholdEvents" minOccurs="0">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="event" type="tns:ThresholdEvent" maxOccurs="unbounded"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="maintenanceEvents" minOccurs="0">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="event" type="tns:MaintenanceEvent" maxOccurs="unbounded"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GenerateInvoiceResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="success" type="xsd:boolean" minOccurs="1"/>
+            <xsd:element name="invoice" type="tns:Invoice" minOccurs="0"/>
+            <xsd:element name="invoiceNumber" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="message" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <!-- OPÉRATION 2 : GetInvoices -->
+      
+      <xsd:element name="GetInvoicesRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="clientId" type="xsd:string" minOccurs="1"/>
+            <xsd:element name="contractNumber" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="startDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="endDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="status" type="tns:InvoiceStatus" minOccurs="0"/>
+            <xsd:element name="maxResults" type="xsd:int" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetInvoicesResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="success" type="xsd:boolean" minOccurs="1"/>
+            <xsd:element name="invoices" minOccurs="0">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="invoice" type="tns:Invoice" maxOccurs="unbounded"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="totalCount" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="message" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <!-- ============================================
+       MESSAGES
+       ============================================ -->
+
+  <message name="GenerateInvoiceRequestMsg">
+    <part name="body" element="tns:GenerateInvoiceRequest"/>
+  </message>
+
+  <message name="GenerateInvoiceResponseMsg">
+    <part name="body" element="tns:GenerateInvoiceResponse"/>
+  </message>
+
+  <message name="GenerateInvoiceFaultMsg">
+    <part name="fault" type="tns:FaultDetail"/>
+  </message>
+
+  <message name="GetInvoicesRequestMsg">
+    <part name="body" element="tns:GetInvoicesRequest"/>
+  </message>
+
+  <message name="GetInvoicesResponseMsg">
+    <part name="body" element="tns:GetInvoicesResponse"/>
+  </message>
+
+  <message name="GetInvoicesFaultMsg">
+    <part name="fault" type="tns:FaultDetail"/>
+  </message>
+
+  <!-- ============================================
+       PORT TYPE (Interface abstraite)
+       ============================================ -->
+
+  <portType name="BillingServicePortType">
+    <documentation>
+      Service de facturation pour la plateforme Thermosense.
+      Gère la génération de factures basées sur les événements de monitoring 
+      (dépassements de seuils) et de maintenance d'équipements.
+      Assure la traçabilité transactionnelle et la non-répudiation financière.
+    </documentation>
+
+    <!-- Opération 1 : Générer une facture -->
+    <operation name="GenerateInvoice">
+      <documentation>
+        Crée une nouvelle facture en agrégeant les événements de monitoring et 
+        de maintenance pour une période donnée. 
+        Retourne le numéro de facture généré ou une erreur.
+      </documentation>
+      <input message="tns:GenerateInvoiceRequestMsg" name="GenerateInvoiceInput"/>
+      <output message="tns:GenerateInvoiceResponseMsg" name="GenerateInvoiceOutput"/>
+      <fault name="GenerationError" message="tns:GenerateInvoiceFaultMsg"/>
+      <fault name="ValidationError" message="tns:GenerateInvoiceFaultMsg"/>
+      <fault name="AuthorizationError" message="tns:GenerateInvoiceFaultMsg"/>
+    </operation>
+
+    <!-- Opération 2 : Récupérer les factures -->
+    <operation name="GetInvoices">
+      <documentation>
+        Récupère l'historique des factures générées pour un client,
+        avec filtrage optionnel par période, numéro de contrat ou statut.
+        Supporte la pagination pour les résultats volumineux.
+      </documentation>
+      <input message="tns:GetInvoicesRequestMsg" name="GetInvoicesInput"/>
+      <output message="tns:GetInvoicesResponseMsg" name="GetInvoicesOutput"/>
+      <fault name="QueryError" message="tns:GetInvoicesFaultMsg"/>
+      <fault name="AuthorizationError" message="tns:GetInvoicesFaultMsg"/>
+    </operation>
+  </portType>
+
+  <!-- ============================================
+       BINDING (Implémentation du protocole SOAP)
+       ============================================ -->
+
+  <binding name="BillingServiceBinding" type="tns:BillingServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="GenerateInvoice">
+      <soap:operation soapAction="http://thermosense.internal/billing/GenerateInvoice"/>
+      <input name="GenerateInvoiceInput">
+        <soap:body use="literal"/>
+      </input>
+      <output name="GenerateInvoiceOutput">
+        <soap:body use="literal"/>
+      </output>
+      <fault name="GenerationError">
+        <soap:fault name="GenerationError" use="literal"/>
+      </fault>
+      <fault name="ValidationError">
+        <soap:fault name="ValidationError" use="literal"/>
+      </fault>
+      <fault name="AuthorizationError">
+        <soap:fault name="AuthorizationError" use="literal"/>
+      </fault>
+    </operation>
+
+    <operation name="GetInvoices">
+      <soap:operation soapAction="http://thermosense.internal/billing/GetInvoices"/>
+      <input name="GetInvoicesInput">
+        <soap:body use="literal"/>
+      </input>
+      <output name="GetInvoicesOutput">
+        <soap:body use="literal"/>
+      </output>
+      <fault name="QueryError">
+        <soap:fault name="QueryError" use="literal"/>
+      </fault>
+      <fault name="AuthorizationError">
+        <soap:fault name="AuthorizationError" use="literal"/>
+      </fault>
+    </operation>
+  </binding>
+
+  <!-- ============================================
+       SERVICE
+       ============================================ -->
+
+  <service name="BillingService">
+    <port name="BillingServicePort" binding="tns:BillingServiceBinding">
+      <soap:address location="http://billing.internal.thermosense.com:8080/ws/billing"/>
+    </port>
+  </service>
+
+</definitions>
