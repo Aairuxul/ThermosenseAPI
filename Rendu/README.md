@@ -73,6 +73,18 @@ Cartographie des vérifications d'accès dans l'application.
 
 Audit associé : `audit/audits-recus/rapport_audit_groupe1.docx` (audit reçu) · `audit/nos-audits/rapport-audit-produit.md` (audit produit par notre groupe).
 
+### 12. [Quality gate API](12-quality-gate.md) ⭐
+**Livrable Séance 6-7 — Phase 4B (graine Note 3 § 2.3)**
+- 5 règles bloquantes (B1-B5) + 3 avertissements (W1-W3) au format « Si ... alors ... »
+- Lint OpenAPI (Spectral) + tests de contrat (Schemathesis) + détection breaking change (`oasdiff`)
+- Politique sécurité (no-secrets, securitySchemes, scan dépendances) + limites assumées du gate
+
+### 13. [Remédiation express — Phase 3](13-remediation-express.md) ⭐
+**Livrable Séance 6-7 — Phase 3 (réponse au rapport d'audit reçu)**
+- 2 non-conformités Bloquantes traitées en séance : **NC #5 Versioning `/v1`** + **NC #6 Idempotence**
+- Diff visible sur `contrat-openapi.yaml` (commits `2a1f340`, `3fe49b2`) + justification d'impact mobile/IoT
+- Plan interséance : 5 NC restantes du rapport — toutes traitées avant la livraison Note 3
+
 ---
 
 ## 🔗 Documentation associée
