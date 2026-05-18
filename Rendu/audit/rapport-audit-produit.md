@@ -181,22 +181,3 @@
 - [ ] Le rapport a été remis au groupe audité (nom + heure : `[À REMPLIR à la remise]`)
 
 **Signature / validation groupe auditeur :** ______________________
-
----
-
-## Aide-mémoire — calibrage gravité
-
-| Gravité      | Quand l'utiliser                                                      | Exemple                                                  |
-| ------------ | --------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Bloquant** | Risque d'intégration incorrecte, double effet, contournement sécurité | `POST /commands` sans idempotence + retries mobiles      |
-| **Majeur**   | Ralentit fortement l'intégration ou crée des erreurs fréquentes       | Pas d'exemple sur endpoint critique ; erreurs non typées |
-| **Mineur**   | DX dégradée, pas de risque immédiat en prod                           | `operationId` manquant ; description vague               |
-
-## Aide-mémoire — questions à poser à l'audité
-
-- « Ce champ X, il est `required` implicite ou explicite ? »
-- « Quelle est la sémantique du 409 ici ? différente du 422 ? »
-- « Si je fais 2x le même POST avec timeout réseau au milieu, il se passe quoi ? »
-- « Comment vous gérez le breaking change v1 → v2 ? »
-- « Sur cet endpoint liste qui peut retourner beaucoup de résultats, vous limitez comment ? »
-- « Cet endpoint est protégé par quoi exactement ? »
