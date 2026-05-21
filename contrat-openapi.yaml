@@ -161,7 +161,7 @@ paths:
                   user:
                     $ref: "#/components/schemas/User"
               example:
-                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTIifQ.signature"
+                token: "FAKE_JWT_TOKEN_example_user2_admin_do_not_use"
                 user:
                   id: "user-2"
                   email: "admin@thermosense.com"

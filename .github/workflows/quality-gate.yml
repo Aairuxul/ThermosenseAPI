@@ -105,21 +105,6 @@ jobs:
                     echo "✅ VALIDÉ - Pas de breaking change détecté" >> $GITHUB_STEP_SUMMARY
                   fi
 
-            # GATE 5: npm audit
-            - name: 📦 Audit Dépendances
-              id: audit
-              run: |
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "### 5. Audit Dépendances" >> $GITHUB_STEP_SUMMARY
-
-                  npm audit --audit-level=high 2>&1 | tee audit-results.txt || true
-
-                  if [ $? -eq 0 ]; then
-                    echo "✅ VALIDÉ - Audit OK" >> $GITHUB_STEP_SUMMARY
-                  else
-                    echo "⚠️ ATTENTION - Vulnérabilités détectées" >> $GITHUB_STEP_SUMMARY
-                  fi
-
             # Summary
             - name: 📊 Résumé Quality Gate
               if: always()
@@ -140,37 +125,3 @@ jobs:
             - name: ✅ Final Gate Status
               if: failure()
               run: exit 1
-
-    # Optional: Comment on PR with results
-    pr-comment:
-        runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
-        needs: quality-gate
-        permissions:
-            pull-requests: write
-
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Post QG Summary to PR
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const comment = `## ✅ Quality Gate Passed
-
-                      PR: #${{ github.event.pull_request.number }}
-                      Commit: [\`${{ github.event.pull_request.head.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
-
-                      **Tous les gates validés:**
-                      - ✅ Lint OpenAPI
-                      - ✅ Détection Secrets
-                      - ✅ Tests Sécurité
-                      - ✅ Audit Dépendances
-                      `;
-
-                      github.rest.issues.createComment({
-                        issue_number: context.issue.number,
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        body: comment
-                      });

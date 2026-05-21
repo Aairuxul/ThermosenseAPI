@@ -1,0 +1,477 @@
+
+> thermosenseapi@1.0.0 test:auth
+> node tests/auth.test.js
+
+Demarrage des tests d'authentification JWT...
+
+Login OK — token obtenu
+
+Claims du token :
+{
+  "sub": "user-1",
+  "userId": "user-1",
+  "email": "root",
+  "role": "admin",
+  "zone": null,
+  "resourceType": null,
+  "resourceId": null,
+  "scope": "areas:read areas:write sensors:read sensors:write measures:read measures:write actuators:read actuators:write alert-thresholds:read alert-thresholds:write users:read users:write",
+  "tokenType": "access",
+  "iat": 1779365303,
+  "exp": 1779367103,
+  "aud": "thermosense-api",
+  "iss": "thermosense-auth"
+}
+
+============================================================
+## Test nominal — Requete avec token valide sur POST /areas
+============================================================
+Resultat attendu : 201
+Resultat obtenu  : 201
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJ1c2VySWQiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJ6b25lIjpudWxsLCJyZXNvdXJjZVR5cGUiOm51bGwsInJlc291cmNlSWQiOm51bGwsInNjb3BlIjoiYXJlYXM6cmVhZCBhcmVhczp3cml0ZSBzZW5zb3JzOnJlYWQgc2Vuc29yczp3cml0ZSBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIGFjdHVhdG9yczp3cml0ZSBhbGVydC10aHJlc2hvbGRzOnJlYWQgYWxlcnQtdGhyZXNob2xkczp3cml0ZSB1c2VyczpyZWFkIHVzZXJzOndyaXRlIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.uDdQoXorf3MrvNSMWb56p4xXxhgAnblmRwyCIRiABAY"}
+Body    : {"buildingId":"building-1","name":"Zone Test AuthN"}
+
+### Analyse
+Le middleware a accepte le token valide et laisse passer la requete.
+L'endpoint a cree la ressource et retourne 201 Created.
+Reponse : {"id":"area-3","name":"Zone Test AuthN","buildingId":"building-1","sensors":[]}
+
+============================================================
+## AuthZ — Operator ne voit que sa zone sur GET /areas
+============================================================
+Resultat attendu : 200:area-1
+Resultat obtenu  : 200:area-1
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTMiLCJ1c2VySWQiOiJ1c2VyLTMiLCJlbWFpbCI6Im9wZXJhdG9yLmFAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6Im9wZXJhdG9yIiwiem9uZSI6ImFyZWEtMSIsInJlc291cmNlVHlwZSI6bnVsbCwicmVzb3VyY2VJZCI6bnVsbCwic2NvcGUiOiJhcmVhczpyZWFkIHNlbnNvcnM6cmVhZCBzZW5zb3JzOndyaXRlIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWN0dWF0b3JzOndyaXRlIGFsZXJ0LXRocmVzaG9sZHM6cmVhZCBhbGVydC10aHJlc2hvbGRzOndyaXRlIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.r6H5Ut7Ll80Kmz-uny4NBfsIf0Cdh8eaVZ9wiMT8WHE"}
+Body    : (aucun)
+
+### Analyse
+Un operator doit etre filtre sur sa zone.
+La reponse doit contenir uniquement la zone rattachee au token.
+Reponse : {"data":[{"id":"area-1","name":"Zone A — Entrepôt Nord","buildingId":"building-1","sensors":[{"id":"sensor-1","type":"temperature","status":"active","areaId":"area-1"},{"id":"sensor-2","type":"temperature","status":"active","areaId":"area-1"},{"id":"sensor-3","type":"humidity","status":"active","areaId":"area-1"},{"id":"sensor-4","type":"temperature","status":"inactive","areaId":"area-1"}]}]}
+
+============================================================
+## AuthZ — Reader accede en lecture seule a sa zone sur GET /areas
+============================================================
+Resultat attendu : 200:area-1
+Resultat obtenu  : 200:area-1
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTUiLCJ1c2VySWQiOiJ1c2VyLTUiLCJlbWFpbCI6InJlYWRlci5hQHRoZXJtb3NlbnNlLmNvbSIsInJvbGUiOiJyZWFkZXIiLCJ6b25lIjoiYXJlYS0xIiwicmVzb3VyY2VUeXBlIjpudWxsLCJyZXNvdXJjZUlkIjpudWxsLCJzY29wZSI6ImFyZWFzOnJlYWQgc2Vuc29yczpyZWFkIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWxlcnQtdGhyZXNob2xkczpyZWFkIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.sr5-7_QgYj-wCiXDUF9O7TKHHw8_GJUMDLhH66dUlfM"}
+Body    : (aucun)
+
+### Analyse
+Le reader doit conserver un acces de consultation, borne a sa zone.
+Il ne doit pas avoir de visibilite globale.
+Reponse : {"data":[{"id":"area-1","name":"Zone A — Entrepôt Nord","buildingId":"building-1","sensors":[{"id":"sensor-1","type":"temperature","status":"active","areaId":"area-1"},{"id":"sensor-2","type":"temperature","status":"active","areaId":"area-1"},{"id":"sensor-3","type":"humidity","status":"active","areaId":"area-1"},{"id":"sensor-4","type":"temperature","status":"inactive","areaId":"area-1"}]}]}
+
+============================================================
+## AuthZ — Reader ne peut pas creer une zone
+============================================================
+Resultat attendu : 403
+Resultat obtenu  : 403
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTUiLCJ1c2VySWQiOiJ1c2VyLTUiLCJlbWFpbCI6InJlYWRlci5hQHRoZXJtb3NlbnNlLmNvbSIsInJvbGUiOiJyZWFkZXIiLCJ6b25lIjoiYXJlYS0xIiwicmVzb3VyY2VUeXBlIjpudWxsLCJyZXNvdXJjZUlkIjpudWxsLCJzY29wZSI6ImFyZWFzOnJlYWQgc2Vuc29yczpyZWFkIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWxlcnQtdGhyZXNob2xkczpyZWFkIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.sr5-7_QgYj-wCiXDUF9O7TKHHw8_GJUMDLhH66dUlfM"}
+Body    : {"buildingId":"building-1","name":"Zone Reader Refuse"}
+
+### Analyse
+Le role reader est strictement en lecture seule.
+La creation d'une zone est reservee a l'administration.
+Reponse : {"code":"forbidden","message":"Action interdite"}
+
+============================================================
+## AuthZ — Operator peut lire un capteur de sa zone
+============================================================
+Resultat attendu : 200:sensor-1
+Resultat obtenu  : 200:sensor-1
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/sensors/sensor-1
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTMiLCJ1c2VySWQiOiJ1c2VyLTMiLCJlbWFpbCI6Im9wZXJhdG9yLmFAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6Im9wZXJhdG9yIiwiem9uZSI6ImFyZWEtMSIsInJlc291cmNlVHlwZSI6bnVsbCwicmVzb3VyY2VJZCI6bnVsbCwic2NvcGUiOiJhcmVhczpyZWFkIHNlbnNvcnM6cmVhZCBzZW5zb3JzOndyaXRlIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWN0dWF0b3JzOndyaXRlIGFsZXJ0LXRocmVzaG9sZHM6cmVhZCBhbGVydC10aHJlc2hvbGRzOndyaXRlIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.r6H5Ut7Ll80Kmz-uny4NBfsIf0Cdh8eaVZ9wiMT8WHE"}
+Body    : (aucun)
+
+### Analyse
+Un operator peut superviser les capteurs de sa zone.
+Reponse : {"id":"sensor-1","type":"temperature","status":"active","areaId":"area-1"}
+
+============================================================
+## AuthZ — Operator ne peut pas lire un capteur d'une autre zone
+============================================================
+Resultat attendu : 404
+Resultat obtenu  : 404
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/sensors/sensor-5
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTMiLCJ1c2VySWQiOiJ1c2VyLTMiLCJlbWFpbCI6Im9wZXJhdG9yLmFAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6Im9wZXJhdG9yIiwiem9uZSI6ImFyZWEtMSIsInJlc291cmNlVHlwZSI6bnVsbCwicmVzb3VyY2VJZCI6bnVsbCwic2NvcGUiOiJhcmVhczpyZWFkIHNlbnNvcnM6cmVhZCBzZW5zb3JzOndyaXRlIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWN0dWF0b3JzOndyaXRlIGFsZXJ0LXRocmVzaG9sZHM6cmVhZCBhbGVydC10aHJlc2hvbGRzOndyaXRlIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.r6H5Ut7Ll80Kmz-uny4NBfsIf0Cdh8eaVZ9wiMT8WHE"}
+Body    : (aucun)
+
+### Analyse
+Le controle BOLA doit bloquer l'acces a un capteur hors perimetre.
+La reponse masque ici l'existence de la ressource.
+Reponse : {"code":"notFound","message":"Capteur 'sensor-5' introuvable"}
+
+============================================================
+## AuthZ — Operator peut piloter un actionneur de sa zone
+============================================================
+Resultat attendu : 200:off
+Resultat obtenu  : 200:off
+Status           : PASS
+
+### Requete complete
+Methode : PUT
+URL     : http://127.0.0.1:35179/v1/actuators/actuator-1
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTMiLCJ1c2VySWQiOiJ1c2VyLTMiLCJlbWFpbCI6Im9wZXJhdG9yLmFAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6Im9wZXJhdG9yIiwiem9uZSI6ImFyZWEtMSIsInJlc291cmNlVHlwZSI6bnVsbCwicmVzb3VyY2VJZCI6bnVsbCwic2NvcGUiOiJhcmVhczpyZWFkIHNlbnNvcnM6cmVhZCBzZW5zb3JzOndyaXRlIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWN0dWF0b3JzOndyaXRlIGFsZXJ0LXRocmVzaG9sZHM6cmVhZCBhbGVydC10aHJlc2hvbGRzOndyaXRlIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.r6H5Ut7Ll80Kmz-uny4NBfsIf0Cdh8eaVZ9wiMT8WHE"}
+Body    : {"state":"off"}
+
+### Analyse
+Le role operator peut agir sur les actionneurs de sa propre zone.
+Reponse : {"id":"actuator-1","type":"heater","state":"off","areaId":"area-1"}
+
+============================================================
+## AuthZ — Operator ne peut pas piloter un actionneur d'une autre zone
+============================================================
+Resultat attendu : 404
+Resultat obtenu  : 404
+Status           : PASS
+
+### Requete complete
+Methode : PUT
+URL     : http://127.0.0.1:35179/v1/actuators/actuator-3
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTMiLCJ1c2VySWQiOiJ1c2VyLTMiLCJlbWFpbCI6Im9wZXJhdG9yLmFAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6Im9wZXJhdG9yIiwiem9uZSI6ImFyZWEtMSIsInJlc291cmNlVHlwZSI6bnVsbCwicmVzb3VyY2VJZCI6bnVsbCwic2NvcGUiOiJhcmVhczpyZWFkIHNlbnNvcnM6cmVhZCBzZW5zb3JzOndyaXRlIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWN0dWF0b3JzOndyaXRlIGFsZXJ0LXRocmVzaG9sZHM6cmVhZCBhbGVydC10aHJlc2hvbGRzOndyaXRlIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.r6H5Ut7Ll80Kmz-uny4NBfsIf0Cdh8eaVZ9wiMT8WHE"}
+Body    : {"state":"off"}
+
+### Analyse
+Le controle BOLA doit refuser une action hors perimetre.
+Reponse : {"code":"notFound","message":"Actionneur 'actuator-3' introuvable"}
+
+============================================================
+## AuthZ — Device capteur peut lire sa propre ressource
+============================================================
+Resultat attendu : 200:sensor-1
+Resultat obtenu  : 200:sensor-1
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/sensors/sensor-1
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTYiLCJ1c2VySWQiOiJ1c2VyLTYiLCJlbWFpbCI6ImRldmljZS5zZW5zb3JAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6ImRldmljZSIsInpvbmUiOiJhcmVhLTEiLCJyZXNvdXJjZVR5cGUiOiJzZW5zb3IiLCJyZXNvdXJjZUlkIjoic2Vuc29yLTEiLCJzY29wZSI6InNlbnNvcnM6cmVhZCBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.ZDWTUr3HqmG4YxNV9GHl2jQO229DLk7pHPwHrY7hVxI"}
+Body    : (aucun)
+
+### Analyse
+Le device capteur est borne a sa propre identite technique.
+Reponse : {"id":"sensor-1","type":"temperature","status":"active","areaId":"area-1"}
+
+============================================================
+## AuthZ — Device capteur ne peut pas lire un autre capteur de la meme zone
+============================================================
+Resultat attendu : 404
+Resultat obtenu  : 404
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/sensors/sensor-2
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTYiLCJ1c2VySWQiOiJ1c2VyLTYiLCJlbWFpbCI6ImRldmljZS5zZW5zb3JAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6ImRldmljZSIsInpvbmUiOiJhcmVhLTEiLCJyZXNvdXJjZVR5cGUiOiJzZW5zb3IiLCJyZXNvdXJjZUlkIjoic2Vuc29yLTEiLCJzY29wZSI6InNlbnNvcnM6cmVhZCBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.ZDWTUr3HqmG4YxNV9GHl2jQO229DLk7pHPwHrY7hVxI"}
+Body    : (aucun)
+
+### Analyse
+Le device ne doit pas heriter d'un acces par zone.
+Il est limite a la ressource dont il porte l'identite.
+Reponse : {"code":"notFound","message":"Capteur 'sensor-2' introuvable"}
+
+============================================================
+## AuthZ — Device capteur peut publier une mesure sur sa ressource
+============================================================
+Resultat attendu : 201:sensor-1
+Resultat obtenu  : 201:sensor-1
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/sensors/sensor-1/measures
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTYiLCJ1c2VySWQiOiJ1c2VyLTYiLCJlbWFpbCI6ImRldmljZS5zZW5zb3JAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6ImRldmljZSIsInpvbmUiOiJhcmVhLTEiLCJyZXNvdXJjZVR5cGUiOiJzZW5zb3IiLCJyZXNvdXJjZUlkIjoic2Vuc29yLTEiLCJzY29wZSI6InNlbnNvcnM6cmVhZCBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.ZDWTUr3HqmG4YxNV9GHl2jQO229DLk7pHPwHrY7hVxI"}
+Body    : {"timestamp":"2026-05-21T12:08:23.774Z","value":21.4}
+
+### Analyse
+Le POST de mesure reste autorise pour le device proprietaire du capteur.
+Reponse : {"id":"measure-29","sensorId":"sensor-1","timestamp":"2026-05-21T12:08:23.774Z","value":21.4}
+
+============================================================
+## AuthZ — Device n'a pas acces a la liste des zones
+============================================================
+Resultat attendu : 403
+Resultat obtenu  : 403
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTYiLCJ1c2VySWQiOiJ1c2VyLTYiLCJlbWFpbCI6ImRldmljZS5zZW5zb3JAdGhlcm1vc2Vuc2UuY29tIiwicm9sZSI6ImRldmljZSIsInpvbmUiOiJhcmVhLTEiLCJyZXNvdXJjZVR5cGUiOiJzZW5zb3IiLCJyZXNvdXJjZUlkIjoic2Vuc29yLTEiLCJzY29wZSI6InNlbnNvcnM6cmVhZCBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.ZDWTUr3HqmG4YxNV9GHl2jQO229DLk7pHPwHrY7hVxI"}
+Body    : (aucun)
+
+### Analyse
+Un device IoT ne doit pas obtenir de visibilite transverse sur le parc.
+Reponse : {"code":"forbidden","message":"Action interdite"}
+
+============================================================
+## AuthZ — Device actionneur peut lire sa propre ressource
+============================================================
+Resultat attendu : 200:actuator-3
+Resultat obtenu  : 200:actuator-3
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/actuators/actuator-3
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTciLCJ1c2VySWQiOiJ1c2VyLTciLCJlbWFpbCI6ImRldmljZS5hY3R1YXRvckB0aGVybW9zZW5zZS5jb20iLCJyb2xlIjoiZGV2aWNlIiwiem9uZSI6ImFyZWEtMiIsInJlc291cmNlVHlwZSI6ImFjdHVhdG9yIiwicmVzb3VyY2VJZCI6ImFjdHVhdG9yLTMiLCJzY29wZSI6InNlbnNvcnM6cmVhZCBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.x10vSkx2bqrOjFETCUPm4QeA5xaAWaxlMhOBxSRKn48"}
+Body    : (aucun)
+
+### Analyse
+Le device actionneur doit pouvoir consulter son propre etat si necessaire.
+Reponse : {"id":"actuator-3","type":"heater","state":"auto","areaId":"area-2"}
+
+============================================================
+## AuthZ — Device actionneur ne peut pas s'auto-commander
+============================================================
+Resultat attendu : 403
+Resultat obtenu  : 403
+Status           : PASS
+
+### Requete complete
+Methode : PUT
+URL     : http://127.0.0.1:35179/v1/actuators/actuator-3
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTciLCJ1c2VySWQiOiJ1c2VyLTciLCJlbWFpbCI6ImRldmljZS5hY3R1YXRvckB0aGVybW9zZW5zZS5jb20iLCJyb2xlIjoiZGV2aWNlIiwiem9uZSI6ImFyZWEtMiIsInJlc291cmNlVHlwZSI6ImFjdHVhdG9yIiwicmVzb3VyY2VJZCI6ImFjdHVhdG9yLTMiLCJzY29wZSI6InNlbnNvcnM6cmVhZCBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.x10vSkx2bqrOjFETCUPm4QeA5xaAWaxlMhOBxSRKn48"}
+Body    : {"state":"on"}
+
+### Analyse
+Un actionneur authentifie ne doit pas pouvoir se donner lui-meme des ordres.
+La route de commande reste reservee a l'admin et a l'operator de zone.
+Reponse : {"code":"forbidden","message":"Action interdite"}
+
+============================================================
+## AuthZ — Reader peut consulter sa propre fiche utilisateur
+============================================================
+Resultat attendu : 200:user-5
+Resultat obtenu  : 200:user-5
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/users/user-5
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTUiLCJ1c2VySWQiOiJ1c2VyLTUiLCJlbWFpbCI6InJlYWRlci5hQHRoZXJtb3NlbnNlLmNvbSIsInJvbGUiOiJyZWFkZXIiLCJ6b25lIjoiYXJlYS0xIiwicmVzb3VyY2VUeXBlIjpudWxsLCJyZXNvdXJjZUlkIjpudWxsLCJzY29wZSI6ImFyZWFzOnJlYWQgc2Vuc29yczpyZWFkIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWxlcnQtdGhyZXNob2xkczpyZWFkIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.sr5-7_QgYj-wCiXDUF9O7TKHHw8_GJUMDLhH66dUlfM"}
+Body    : (aucun)
+
+### Analyse
+Le role reader conserve un acces self-service a son propre profil.
+Reponse : {"id":"user-5","email":"reader.a@thermosense.com","name":"Robin Lecteur"}
+
+============================================================
+## AuthZ — Reader ne peut pas consulter la fiche d'un autre utilisateur
+============================================================
+Resultat attendu : 404
+Resultat obtenu  : 404
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/users/user-4
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTUiLCJ1c2VySWQiOiJ1c2VyLTUiLCJlbWFpbCI6InJlYWRlci5hQHRoZXJtb3NlbnNlLmNvbSIsInJvbGUiOiJyZWFkZXIiLCJ6b25lIjoiYXJlYS0xIiwicmVzb3VyY2VUeXBlIjpudWxsLCJyZXNvdXJjZUlkIjpudWxsLCJzY29wZSI6ImFyZWFzOnJlYWQgc2Vuc29yczpyZWFkIG1lYXN1cmVzOnJlYWQgYWN0dWF0b3JzOnJlYWQgYWxlcnQtdGhyZXNob2xkczpyZWFkIHVzZXJzOnJlYWQiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIiwiaXNzIjoidGhlcm1vc2Vuc2UtYXV0aCJ9.sr5-7_QgYj-wCiXDUF9O7TKHHw8_GJUMDLhH66dUlfM"}
+Body    : (aucun)
+
+### Analyse
+Le controle BOLA sur /users/:id doit limiter l'acces au self-service.
+Reponse : {"code":"notFound","message":"Utilisateur 'user-4' introuvable"}
+
+============================================================
+## Test adverse 1 — Requete sans header Authorization
+============================================================
+Resultat attendu : 401
+Resultat obtenu  : 401
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json"}
+Body    : {"buildingId":"building-1","name":"Zone Sans Token"}
+
+### Analyse
+Le middleware a correctement rejete la requete avant qu'elle n'atteigne le controleur.
+Le code de retour est bien 401 (identite non prouvee), pas 403 (droits insuffisants).
+Reponse : {"code":"unauthorized","message":"Token d'authentification manquant ou invalide"}
+
+============================================================
+## Test adverse 2 — Requete avec token expire
+============================================================
+Resultat attendu : 401
+Resultat obtenu  : 401
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJzY29wZSI6InJlYWQgd3JpdGUgYWRtaW4iLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2MTcwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIn0.OZCYWoVPctb-nGFltr1E3_MU9hPpz24W95koeDqKvbQ"}
+Body    : {"buildingId":"building-1","name":"Zone Token Expire"}
+
+### Analyse
+Le middleware a detecte que le claim exp est depasse et a rejete le token.
+Un token avec une signature valide mais expire ne doit jamais etre accepte.
+Reponse : {"code":"unauthorized","message":"Token invalide ou expiré"}
+
+============================================================
+## Test adverse 3 — Requete avec token a signature invalide
+============================================================
+Resultat attendu : 401
+Resultat obtenu  : 401
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJzY29wZSI6InJlYWQgd3JpdGUgYWRtaW4iLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoidGhlcm1vc2Vuc2UtYXBpIn0.s-gvRAoCfGiFcxY5V4er-jGNTKiByDihYdj30-N1aHA"}
+Body    : {"buildingId":"building-1","name":"Zone Mauvaise Signature"}
+
+### Analyse
+Le middleware a detecte que la signature ne correspond pas a la cle secrete du serveur.
+Un attaquant ne peut pas forger un token valide sans connaitre le secret.
+Reponse : {"code":"unauthorized","message":"Token invalide ou expiré"}
+
+============================================================
+## Test 2 — Requete Swagger avec Bearer duplique
+============================================================
+Resultat attendu : 201
+Resultat obtenu  : 201
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJ1c2VySWQiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJ6b25lIjpudWxsLCJyZXNvdXJjZVR5cGUiOm51bGwsInJlc291cmNlSWQiOm51bGwsInNjb3BlIjoiYXJlYXM6cmVhZCBhcmVhczp3cml0ZSBzZW5zb3JzOnJlYWQgc2Vuc29yczp3cml0ZSBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIGFjdHVhdG9yczp3cml0ZSBhbGVydC10aHJlc2hvbGRzOnJlYWQgYWxlcnQtdGhyZXNob2xkczp3cml0ZSB1c2VyczpyZWFkIHVzZXJzOndyaXRlIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.uDdQoXorf3MrvNSMWb56p4xXxhgAnblmRwyCIRiABAY"}
+Body    : {"buildingId":"building-1","name":"Zone Token Swagger"}
+
+### Analyse
+Le middleware accepte aussi un token colle avec le prefixe Bearer deja inclus dans la valeur Swagger.
+Cela evite les erreurs 401 quand l'utilisateur copie accidentellement 'Bearer <token>' dans la fenetre Authorize.
+Reponse : {"id":"area-4","name":"Zone Token Swagger","buildingId":"building-1","sensors":[]}
+
+============================================================
+## Test 3 — Requete Swagger avec token entre guillemets
+============================================================
+Resultat attendu : 201
+Resultat obtenu  : 201
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJ1c2VySWQiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJ6b25lIjpudWxsLCJyZXNvdXJjZVR5cGUiOm51bGwsInJlc291cmNlSWQiOm51bGwsInNjb3BlIjoiYXJlYXM6cmVhZCBhcmVhczp3cml0ZSBzZW5zb3JzOnJlYWQgc2Vuc29yczp3cml0ZSBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIGFjdHVhdG9yczp3cml0ZSBhbGVydC10aHJlc2hvbGRzOnJlYWQgYWxlcnQtdGhyZXNob2xkczp3cml0ZSB1c2VyczpyZWFkIHVzZXJzOndyaXRlIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.uDdQoXorf3MrvNSMWb56p4xXxhgAnblmRwyCIRiABAY\""}
+Body    : {"buildingId":"building-1","name":"Zone Token Guillemets"}
+
+### Analyse
+Le middleware accepte aussi un token colle depuis Swagger avec des guillemets autour de la valeur.
+Cela couvre le cas ou le token est copie depuis la reponse JSON avec les quotes incluses.
+Reponse : {"id":"area-5","name":"Zone Token Guillemets","buildingId":"building-1","sensors":[]}
+
+============================================================
+## Test 4 — Requete Swagger avec payload JSON colle
+============================================================
+Resultat attendu : 201
+Resultat obtenu  : 201
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer {\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJ1c2VySWQiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJ6b25lIjpudWxsLCJyZXNvdXJjZVR5cGUiOm51bGwsInJlc291cmNlSWQiOm51bGwsInNjb3BlIjoiYXJlYXM6cmVhZCBhcmVhczp3cml0ZSBzZW5zb3JzOnJlYWQgc2Vuc29yczp3cml0ZSBtZWFzdXJlczpyZWFkIG1lYXN1cmVzOndyaXRlIGFjdHVhdG9yczpyZWFkIGFjdHVhdG9yczp3cml0ZSBhbGVydC10aHJlc2hvbGRzOnJlYWQgYWxlcnQtdGhyZXNob2xkczp3cml0ZSB1c2VyczpyZWFkIHVzZXJzOndyaXRlIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc5MzY1MzAzLCJleHAiOjE3NzkzNjcxMDMsImF1ZCI6InRoZXJtb3NlbnNlLWFwaSIsImlzcyI6InRoZXJtb3NlbnNlLWF1dGgifQ.uDdQoXorf3MrvNSMWb56p4xXxhgAnblmRwyCIRiABAY\"}"}
+Body    : {"buildingId":"building-1","name":"Zone Token JSON"}
+
+### Analyse
+Le middleware extrait aussi le JWT si la valeur collee contient encore le JSON de la reponse de login.
+Cela couvre le cas ou seul le fragment JWT est exploitable dans une chaine plus longue.
+Reponse : {"id":"area-6","name":"Zone Token JSON","buildingId":"building-1","sensors":[]}
+
+============================================================
+## Test 5 — Requete avec token dont aud ne correspond pas a l'API
+============================================================
+Resultat attendu : 401
+Resultat obtenu  : 401
+Status           : PASS
+
+### Requete complete
+Methode : POST
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEiLCJlbWFpbCI6InJvb3QiLCJyb2xlIjoiYWRtaW4iLCJzY29wZSI6InJlYWQgd3JpdGUgYWRtaW4iLCJpYXQiOjE3NzkzNjUzMDMsImV4cCI6MTc3OTM2NzEwMywiYXVkIjoib3RoZXItYXBpIn0.lfLIFnKt9vkXmWyZmAFKenDPubHAY7md60tUJjOZtp0"}
+Body    : {"buildingId":"building-1","name":"Zone Mauvais Audience"}
+
+### Analyse
+Le middleware a detecte que le claim aud ('other-api') ne correspond pas a 'thermosense-api'.
+Un token valide destine a une autre API est correctement rejete.
+Reponse : {"code":"unauthorized","message":"Token invalide ou expiré"}
+
+============================================================
+## Test 6 — Requete sans token
+============================================================
+Resultat attendu : 401
+Resultat obtenu  : 401
+Status           : PASS
+
+### Requete complete
+Methode : GET
+URL     : http://127.0.0.1:35179/v1/areas
+Headers : {"Content-Type":"application/json"}
+Body    : (aucun)
+
+### Analyse
+Le middleware rejette la requete qui n'a pas de header Authorization.
+L'endpoint GET /areas est protege et ne doit pas etre accessible sans token.
+Reponse : {"code":"unauthorized","message":"Token d'authentification manquant ou invalide"}
+
+============================================================
+RESUME
+============================================================
+  PASS  Test nominal — Requete avec token valide sur POST /areas
+  PASS  AuthZ — Operator ne voit que sa zone sur GET /areas
+  PASS  AuthZ — Reader accede en lecture seule a sa zone sur GET /areas
+  PASS  AuthZ — Reader ne peut pas creer une zone
+  PASS  AuthZ — Operator peut lire un capteur de sa zone
+  PASS  AuthZ — Operator ne peut pas lire un capteur d'une autre zone
+  PASS  AuthZ — Operator peut piloter un actionneur de sa zone
+  PASS  AuthZ — Operator ne peut pas piloter un actionneur d'une autre zone
+  PASS  AuthZ — Device capteur peut lire sa propre ressource
+  PASS  AuthZ — Device capteur ne peut pas lire un autre capteur de la meme zone
+  PASS  AuthZ — Device capteur peut publier une mesure sur sa ressource
+  PASS  AuthZ — Device n'a pas acces a la liste des zones
+  PASS  AuthZ — Device actionneur peut lire sa propre ressource
+  PASS  AuthZ — Device actionneur ne peut pas s'auto-commander
+  PASS  AuthZ — Reader peut consulter sa propre fiche utilisateur
+  PASS  AuthZ — Reader ne peut pas consulter la fiche d'un autre utilisateur
+  PASS  Test adverse 1 — Requete sans header Authorization
+  PASS  Test adverse 2 — Requete avec token expire
+  PASS  Test adverse 3 — Requete avec token a signature invalide
+  PASS  Test 2 — Requete Swagger avec Bearer duplique
+  PASS  Test 3 — Requete Swagger avec token entre guillemets
+  PASS  Test 4 — Requete Swagger avec payload JSON colle
+  PASS  Test 5 — Requete avec token dont aud ne correspond pas a l'API
+  PASS  Test 6 — Requete sans token
+
+24/24 tests reussis
