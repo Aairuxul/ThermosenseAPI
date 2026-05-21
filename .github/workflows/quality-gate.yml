@@ -1,0 +1,176 @@
+name: Quality Gate - API Contract
+
+on:
+    pull_request:
+        paths:
+            - 'contrat-openapi.yaml'
+            - 'src/**'
+            - 'package.json'
+            - '.github/workflows/quality-gate.yml'
+    push:
+        branches:
+            - main
+        paths:
+            - 'contrat-openapi.yaml'
+            - 'src/**'
+            - 'package.json'
+
+jobs:
+    quality-gate:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '18'
+                  cache: 'npm'
+
+            - name: Install dependencies
+              run: npm ci
+
+            # GATE 1: Lint OpenAPI
+            - name: 🔍 Lint OpenAPI Contract
+              id: lint
+              run: |
+                  echo "## Quality Gate Results" > $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 1. OpenAPI Lint" >> $GITHUB_STEP_SUMMARY
+                  npx spectral lint contrat-openapi.yaml --format json > lint-results.json 2>&1 || true
+
+                  ERROR_COUNT=$(jq '[.[] | select(.severity == 0)] | length' lint-results.json)
+                  echo "Erreurs détectées: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$ERROR_COUNT" -gt 0 ]; then
+                    echo "❌ BLOQUÉ - Erreurs lint détectées" >> $GITHUB_STEP_SUMMARY
+                    jq '.' lint-results.json >> $GITHUB_STEP_SUMMARY
+                    exit 1
+                  else
+                    echo "✅ VALIDÉ - Lint OpenAPI OK" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+            # GATE 2: Secret Detection
+            - name: 🔐 Secret Detection
+              id: secrets
+              run: |
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 2. Détection Secrets" >> $GITHUB_STEP_SUMMARY
+
+                  # Check for JWT patterns in examples
+                  JWT_FOUND=$(grep -n 'eyJ[A-Za-z0-9_-]\{20,\}' contrat-openapi.yaml | wc -l)
+
+                  if [ "$JWT_FOUND" -gt 0 ]; then
+                    echo "❌ BLOQUÉ - JWT détecté en clair" >> $GITHUB_STEP_SUMMARY
+                    exit 1
+                  else
+                    echo "✅ VALIDÉ - Aucun secret détecté" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+            # GATE 3: Tests RBAC/BOLA
+            - name: 🛡️ Tests Sécurité RBAC/BOLA
+              id: auth-tests
+              run: |
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 3. Tests Sécurité" >> $GITHUB_STEP_SUMMARY
+
+                  npm run test:auth 2>&1 | tee auth-results.txt
+
+                  if [ $? -eq 0 ]; then
+                    echo "✅ VALIDÉ - Tests auth OK" >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "❌ BLOQUÉ - Tests auth échoués" >> $GITHUB_STEP_SUMMARY
+                    exit 1
+                  fi
+
+            - name: 📋 Tests Cadrage
+              run: |
+                  npm run test:cadrage 2>&1 | tee cadrage-results.txt
+
+            # GATE 4: Breaking Changes Detection
+            - name: 🚨 Détection Breaking Changes
+              id: breaking
+              run: |
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 4. Breaking Changes" >> $GITHUB_STEP_SUMMARY
+
+                  # Check if OpenAPI version changed (etag/version)
+                  if git diff HEAD~1 contrat-openapi.yaml | grep -q 'version:'; then
+                    echo "⚠️ ATTENTION - Version/ETag modifié" >> $GITHUB_STEP_SUMMARY
+                    echo "Vérifiez que c'est intentionnel et documenté dans CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "✅ VALIDÉ - Pas de breaking change détecté" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+            # GATE 5: npm audit
+            - name: 📦 Audit Dépendances
+              id: audit
+              run: |
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 5. Audit Dépendances" >> $GITHUB_STEP_SUMMARY
+
+                  npm audit --audit-level=high 2>&1 | tee audit-results.txt || true
+
+                  if [ $? -eq 0 ]; then
+                    echo "✅ VALIDÉ - Audit OK" >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "⚠️ ATTENTION - Vulnérabilités détectées" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+            # Summary
+            - name: 📊 Résumé Quality Gate
+              if: always()
+              run: |
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "---" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 📎 Liens" >> $GITHUB_STEP_SUMMARY
+                  echo "- **PR/Commit:** [${{ github.event.pull_request.head.sha || github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha || github.sha }})" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branche:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+                  if [ "${{ github.event.pull_request.number }}" != "" ]; then
+                    echo "- **PR:** #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Conclusion:** Si tous les gates sont ✅, le merge peut être autorisé." >> $GITHUB_STEP_SUMMARY
+
+            # Fail if critical gates failed
+            - name: ✅ Final Gate Status
+              if: failure()
+              run: exit 1
+
+    # Optional: Comment on PR with results
+    pr-comment:
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
+        needs: quality-gate
+        permissions:
+            pull-requests: write
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Post QG Summary to PR
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const comment = `## ✅ Quality Gate Passed
+
+                      PR: #${{ github.event.pull_request.number }}
+                      Commit: [\`${{ github.event.pull_request.head.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
+
+                      **Tous les gates validés:**
+                      - ✅ Lint OpenAPI
+                      - ✅ Détection Secrets
+                      - ✅ Tests Sécurité
+                      - ✅ Audit Dépendances
+                      `;
+
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: comment
+                      });

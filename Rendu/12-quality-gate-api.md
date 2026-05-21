@@ -66,8 +66,4 @@ Aucun merge sur main qui introduit un breaking change sans un fichier changelog 
 
 ## Preuves pour la note 3
 
-| Preuve | Statut |
-| --- | :---: |
-| Capture CI verte ou log lint local (`spectral lint contrat-openapi.yaml` → 0 erreurs) | ☐ — à produire après commit du `spectral.yaml` |
-| Lien PR / commit où le gate a bloqué ou validé | ☐ — historique remédiation `3fe49b2`, `2a1f340`, `9e5e7c1`, `fe9894c` |
-| Extrait config outil (`spectral.yaml`, job CI) dans le dépôt | ☐ — `spectral.yaml` + `.github/workflows/api-contract.yml` à créer |
+capture d'écran lint : ![Capture écran lint](./images/couverture.png)
