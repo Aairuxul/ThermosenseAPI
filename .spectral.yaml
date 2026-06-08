@@ -34,7 +34,7 @@ rules:
     description: "Les opérations de mutation doivent documenter les erreurs via application/problem+json."
     message: "Ajoutez une réponse d'erreur au format application/problem+json pour les opérations POST, PUT, PATCH et DELETE."
     severity: warn
-    given: "$.paths.*.post.responses.*"
+    given: "$.paths.*.post.responses[?(@property.match(/^[45]/))]"
     then:
       field: "content.application/problem+json"
       function: truthy
@@ -43,7 +43,7 @@ rules:
     description: "Les opérations PUT doivent documenter les erreurs via application/problem+json."
     message: "Ajoutez une réponse d'erreur au format application/problem+json pour les opérations PUT."
     severity: warn
-    given: "$.paths.*.put.responses.*"
+    given: "$.paths.*.put.responses[?(@property.match(/^[45]/))]"
     then:
       field: "content.application/problem+json"
       function: truthy
@@ -52,7 +52,7 @@ rules:
     description: "Les opérations PATCH doivent documenter les erreurs via application/problem+json."
     message: "Ajoutez une réponse d'erreur au format application/problem+json pour les opérations PATCH."
     severity: warn
-    given: "$.paths.*.patch.responses.*"
+    given: "$.paths.*.patch.responses[?(@property.match(/^[45]/))]"
     then:
       field: "content.application/problem+json"
       function: truthy
@@ -61,7 +61,7 @@ rules:
     description: "Les opérations DELETE doivent documenter les erreurs via application/problem+json."
     message: "Ajoutez une réponse d'erreur au format application/problem+json pour les opérations DELETE."
     severity: warn
-    given: "$.paths.*.delete.responses.*"
+    given: "$.paths.*.delete.responses[?(@property.match(/^[45]/))]"
     then:
       field: "content.application/problem+json"
       function: truthy

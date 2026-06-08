@@ -225,31 +225,19 @@ Endpoint critique : **`POST /v1/sensors/{id}/measures`** (ingestion IoT en entre
 
 ### E.1 Schéma d'architecture final
 
-```mermaid
-flowchart LR
-  subgraph Clients
-    M[App mobile<br/>operator/reader]
-    D[Devices IoT<br/>sensor / actuator]
-    A[Console admin]
-  end
-  subgraph API["ThermoSense API (/v1) — Express"]
-    direction TB
-    MW["Middlewares<br/>Helmet · CORS · rate-limit"]
-    AUTH["authN JWT<br/>(aud/iss, 30 min)"]
-    AUTHZ["authZ RBAC+BOLA<br/>403 fonction / 404 objet"]
-    IDEM["Idempotency-Key<br/>dédup 24 h"]
-    H["Handlers REST<br/>areas · sensors · measures<br/>actuators · thresholds · users"]
-    LOG["Security logger"]
-  end
-  STORE[("Store en mémoire<br/>seed au boot")]
-  BILL["BillingService<br/>(SOAP / WSDL)"]
+```text
+ CLIENTS                          THERMOSENSE API  (/v1, Express)
+ -------                          --------------------------------------------------------
+ App mobile   \                   Middlewares : Helmet | CORS | rate-limit
+ Devices IoT   >-- HTTPS + JWT -->        |
+ Console      /                           v
+                          authN JWT --> authZ -------> Idempotency --> Handlers --> ( Store
+                          (aud/iss)      RBAC + BOLA    -Key, 24 h      REST          en mémoire )
+                                            |  403 (fonction) / 404 (objet)
+                                            v
+                                     Security logger    (refus d'accès journalisés)
 
-  M --> MW
-  D --> MW
-  A --> MW
-  MW --> AUTH --> AUTHZ --> IDEM --> H --> STORE
-  AUTHZ -.->|refus loggé| LOG
-  H -.->|proxy REST vers SOAP B2B| BILL
+ Handlers REST --[ proxy REST -> SOAP : facturation B2B ]--> BillingService  (SOAP / WSDL)
 ```
 
 Frontières : tout passe par **HTTPS + JWT** ; l'autorisation est **systématiquement à deux étages**
