@@ -1,0 +1,14 @@
+{
+  "name": "thermosense-soutenance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev slides.md --open",
+    "build": "slidev build slides.md",
+    "export": "slidev export slides.md --output thermosense-soutenance.pdf"
+  },
+  "dependencies": {
+    "@slidev/cli": "latest",
+    "@slidev/theme-seriph": "latest"
+  }
+}

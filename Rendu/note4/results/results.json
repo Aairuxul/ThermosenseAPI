@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T07:14:15.266Z",
+  "generatedAt": "2026-06-08T09:24:57.509Z",
   "endpoint": "POST /v1/sensors/sensor-1/measures",
   "n": 100,
   "valueBase": 100000,
@@ -34,7 +34,7 @@
   "variants": [
     {
       "key": "baseline",
-      "label": "Baseline (sans résilience)",
+      "label": "Conforme, sans resilience (cle, sans timeout/retry)",
       "timeouts": {
         "read": 8000,
         "write": 8000
@@ -46,27 +46,11 @@
         "capMs": 4000,
         "jitter": true
       },
-      "useKey": false
+      "useKey": true
     },
     {
       "key": "resilient",
-      "label": "Timeout + retry (sans clé)",
-      "timeouts": {
-        "read": 1500,
-        "write": 3000
-      },
-      "retry": {
-        "enabled": true,
-        "max": 3,
-        "baseMs": 500,
-        "capMs": 4000,
-        "jitter": true
-      },
-      "useKey": false
-    },
-    {
-      "key": "resilient_key",
-      "label": "Timeout + retry + Idempotency-Key",
+      "label": "Conforme + timeout + retry (cle honoree serveur)",
       "timeouts": {
         "read": 1500,
         "write": 3000
@@ -79,6 +63,22 @@
         "jitter": true
       },
       "useKey": true
+    },
+    {
+      "key": "no_key",
+      "label": "Non conforme (sans cle) - controle d'enforcement -> 422",
+      "timeouts": {
+        "read": 1500,
+        "write": 3000
+      },
+      "retry": {
+        "enabled": false,
+        "max": 0,
+        "baseMs": 500,
+        "capMs": 4000,
+        "jitter": true
+      },
+      "useKey": false
     }
   ],
   "results": [
@@ -86,7 +86,7 @@
       "scenario": "A",
       "scenarioLabel": "Nominal dégradé (3G faible)",
       "variant": "baseline",
-      "variantLabel": "Baseline (sans résilience)",
+      "variantLabel": "Conforme, sans resilience (cle, sans timeout/retry)",
       "n": 100,
       "successRatePct": 97,
       "p50PerceivedMs": 364,
@@ -114,14 +114,14 @@
           "capMs": 4000,
           "jitter": true
         },
-        "useKey": false
+        "useKey": true
       }
     },
     {
       "scenario": "A",
       "scenarioLabel": "Nominal dégradé (3G faible)",
       "variant": "resilient",
-      "variantLabel": "Timeout + retry (sans clé)",
+      "variantLabel": "Conforme + timeout + retry (cle honoree serveur)",
       "n": 100,
       "successRatePct": 100,
       "p50PerceivedMs": 364,
@@ -133,44 +133,9 @@
       "physicalPerLogical": 1.04,
       "reqPerMin": 62,
       "serverExecutions": 102,
-      "persistedMeasures": 102,
+      "persistedMeasures": 100,
       "distinctMeasures": 100,
-      "duplicatesObserved": 2,
-      "seed": 20260608,
-      "config": {
-        "timeouts": {
-          "read": 1500,
-          "write": 3000
-        },
-        "retry": {
-          "enabled": true,
-          "max": 3,
-          "baseMs": 500,
-          "capMs": 4000,
-          "jitter": true
-        },
-        "useKey": false
-      }
-    },
-    {
-      "scenario": "A",
-      "scenarioLabel": "Nominal dégradé (3G faible)",
-      "variant": "resilient_key",
-      "variantLabel": "Timeout + retry + Idempotency-Key",
-      "n": 100,
-      "successRatePct": 100,
-      "p50PerceivedMs": 364,
-      "p95PerceivedMs": 498,
-      "maxPerceivedMs": 7387,
-      "meanPerceivedMs": 493,
-      "retriesPerReq": 0.04,
-      "physicalRequests": 104,
-      "physicalPerLogical": 1.04,
-      "reqPerMin": 62,
-      "serverExecutions": 102,
-      "persistedMeasures": 102,
-      "distinctMeasures": 100,
-      "duplicatesObserved": 2,
+      "duplicatesObserved": 0,
       "seed": 20260608,
       "config": {
         "timeouts": {
@@ -188,10 +153,45 @@
       }
     },
     {
+      "scenario": "A",
+      "scenarioLabel": "Nominal dégradé (3G faible)",
+      "variant": "no_key",
+      "variantLabel": "Non conforme (sans cle) - controle d'enforcement -> 422",
+      "n": 100,
+      "successRatePct": 0,
+      "p50PerceivedMs": 364,
+      "p95PerceivedMs": 498,
+      "maxPerceivedMs": 3000,
+      "meanPerceivedMs": 438,
+      "retriesPerReq": 0,
+      "physicalRequests": 100,
+      "physicalPerLogical": 1,
+      "reqPerMin": 60,
+      "serverExecutions": 0,
+      "persistedMeasures": 0,
+      "distinctMeasures": 0,
+      "duplicatesObserved": 0,
+      "seed": 20260608,
+      "config": {
+        "timeouts": {
+          "read": 1500,
+          "write": 3000
+        },
+        "retry": {
+          "enabled": false,
+          "max": 0,
+          "baseMs": 500,
+          "capMs": 4000,
+          "jitter": true
+        },
+        "useKey": false
+      }
+    },
+    {
       "scenario": "B",
       "scenarioLabel": "Réseau très instable (chantier/entrepôt)",
       "variant": "baseline",
-      "variantLabel": "Baseline (sans résilience)",
+      "variantLabel": "Conforme, sans resilience (cle, sans timeout/retry)",
       "n": 100,
       "successRatePct": 82,
       "p50PerceivedMs": 1169,
@@ -219,14 +219,14 @@
           "capMs": 4000,
           "jitter": true
         },
-        "useKey": false
+        "useKey": true
       }
     },
     {
       "scenario": "B",
       "scenarioLabel": "Réseau très instable (chantier/entrepôt)",
       "variant": "resilient",
-      "variantLabel": "Timeout + retry (sans clé)",
+      "variantLabel": "Conforme + timeout + retry (cle honoree serveur)",
       "n": 100,
       "successRatePct": 100,
       "p50PerceivedMs": 1169,
@@ -238,44 +238,9 @@
       "physicalPerLogical": 1.24,
       "reqPerMin": 74,
       "serverExecutions": 114,
-      "persistedMeasures": 114,
+      "persistedMeasures": 100,
       "distinctMeasures": 100,
-      "duplicatesObserved": 14,
-      "seed": 21260608,
-      "config": {
-        "timeouts": {
-          "read": 1500,
-          "write": 3000
-        },
-        "retry": {
-          "enabled": true,
-          "max": 3,
-          "baseMs": 500,
-          "capMs": 4000,
-          "jitter": true
-        },
-        "useKey": false
-      }
-    },
-    {
-      "scenario": "B",
-      "scenarioLabel": "Réseau très instable (chantier/entrepôt)",
-      "variant": "resilient_key",
-      "variantLabel": "Timeout + retry + Idempotency-Key",
-      "n": 100,
-      "successRatePct": 100,
-      "p50PerceivedMs": 1169,
-      "p95PerceivedMs": 4913,
-      "maxPerceivedMs": 11753,
-      "meanPerceivedMs": 1920,
-      "retriesPerReq": 0.24,
-      "physicalRequests": 124,
-      "physicalPerLogical": 1.24,
-      "reqPerMin": 74,
-      "serverExecutions": 114,
-      "persistedMeasures": 114,
-      "distinctMeasures": 100,
-      "duplicatesObserved": 14,
+      "duplicatesObserved": 0,
       "seed": 21260608,
       "config": {
         "timeouts": {
@@ -293,10 +258,45 @@
       }
     },
     {
+      "scenario": "B",
+      "scenarioLabel": "Réseau très instable (chantier/entrepôt)",
+      "variant": "no_key",
+      "variantLabel": "Non conforme (sans cle) - controle d'enforcement -> 422",
+      "n": 100,
+      "successRatePct": 0,
+      "p50PerceivedMs": 1169,
+      "p95PerceivedMs": 3000,
+      "maxPerceivedMs": 3000,
+      "meanPerceivedMs": 1460,
+      "retriesPerReq": 0,
+      "physicalRequests": 100,
+      "physicalPerLogical": 1,
+      "reqPerMin": 60,
+      "serverExecutions": 0,
+      "persistedMeasures": 0,
+      "distinctMeasures": 0,
+      "duplicatesObserved": 0,
+      "seed": 21260608,
+      "config": {
+        "timeouts": {
+          "read": 1500,
+          "write": 3000
+        },
+        "retry": {
+          "enabled": false,
+          "max": 0,
+          "baseMs": 500,
+          "capMs": 4000,
+          "jitter": true
+        },
+        "useKey": false
+      }
+    },
+    {
       "scenario": "C",
       "scenarioLabel": "Panne partielle (passerelle IoT saturée)",
       "variant": "baseline",
-      "variantLabel": "Baseline (sans résilience)",
+      "variantLabel": "Conforme, sans resilience (cle, sans timeout/retry)",
       "n": 100,
       "successRatePct": 52,
       "p50PerceivedMs": 3875,
@@ -324,14 +324,14 @@
           "capMs": 4000,
           "jitter": true
         },
-        "useKey": false
+        "useKey": true
       }
     },
     {
       "scenario": "C",
       "scenarioLabel": "Panne partielle (passerelle IoT saturée)",
       "variant": "resilient",
-      "variantLabel": "Timeout + retry (sans clé)",
+      "variantLabel": "Conforme + timeout + retry (cle honoree serveur)",
       "n": 100,
       "successRatePct": 66,
       "p50PerceivedMs": 9799,
@@ -343,44 +343,9 @@
       "physicalPerLogical": 2.83,
       "reqPerMin": 170,
       "serverExecutions": 207,
-      "persistedMeasures": 207,
+      "persistedMeasures": 100,
       "distinctMeasures": 100,
-      "duplicatesObserved": 107,
-      "seed": 22260608,
-      "config": {
-        "timeouts": {
-          "read": 1500,
-          "write": 3000
-        },
-        "retry": {
-          "enabled": true,
-          "max": 3,
-          "baseMs": 500,
-          "capMs": 4000,
-          "jitter": true
-        },
-        "useKey": false
-      }
-    },
-    {
-      "scenario": "C",
-      "scenarioLabel": "Panne partielle (passerelle IoT saturée)",
-      "variant": "resilient_key",
-      "variantLabel": "Timeout + retry + Idempotency-Key",
-      "n": 100,
-      "successRatePct": 66,
-      "p50PerceivedMs": 9799,
-      "p95PerceivedMs": 14416,
-      "maxPerceivedMs": 14953,
-      "meanPerceivedMs": 9108,
-      "retriesPerReq": 1.83,
-      "physicalRequests": 283,
-      "physicalPerLogical": 2.83,
-      "reqPerMin": 170,
-      "serverExecutions": 207,
-      "persistedMeasures": 207,
-      "distinctMeasures": 100,
-      "duplicatesObserved": 107,
+      "duplicatesObserved": 0,
       "seed": 22260608,
       "config": {
         "timeouts": {
@@ -395,6 +360,41 @@
           "jitter": true
         },
         "useKey": true
+      }
+    },
+    {
+      "scenario": "C",
+      "scenarioLabel": "Panne partielle (passerelle IoT saturée)",
+      "variant": "no_key",
+      "variantLabel": "Non conforme (sans cle) - controle d'enforcement -> 422",
+      "n": 100,
+      "successRatePct": 0,
+      "p50PerceivedMs": 3000,
+      "p95PerceivedMs": 3000,
+      "maxPerceivedMs": 3000,
+      "meanPerceivedMs": 2863,
+      "retriesPerReq": 0,
+      "physicalRequests": 100,
+      "physicalPerLogical": 1,
+      "reqPerMin": 60,
+      "serverExecutions": 0,
+      "persistedMeasures": 0,
+      "distinctMeasures": 0,
+      "duplicatesObserved": 0,
+      "seed": 22260608,
+      "config": {
+        "timeouts": {
+          "read": 1500,
+          "write": 3000
+        },
+        "retry": {
+          "enabled": false,
+          "max": 0,
+          "baseMs": 500,
+          "capMs": 4000,
+          "jitter": true
+        },
+        "useKey": false
       }
     }
   ]

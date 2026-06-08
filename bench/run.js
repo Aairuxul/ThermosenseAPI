@@ -39,27 +39,32 @@ const SCENARIOS = [
   { key: "C", label: "Panne partielle (passerelle IoT saturée)", latMin: 2000, latMax: 4000, loss: 0.5, reqLossShare: 0.5 },
 ];
 
+// Depuis S9, le serveur EXIGE l'Idempotency-Key (422 si absente) et la deduplique sur 24 h
+// (cf. src/idempotency.js, cable sur POST /measures et PUT /actuators). Un client CONFORME
+// doit donc toujours l'envoyer : `baseline` et `resilient` portent tous deux la cle et ne
+// different que par les mecanismes de resilience (timeout/retry) -> avant/apres reseau propre.
+// `no_key` est un CONTROLE NEGATIF : il prouve l'enforcement du contrat (ecriture sans cle -> 422).
 const VARIANTS = [
   {
     key: "baseline",
-    label: "Baseline (sans résilience)",
+    label: "Conforme, sans resilience (cle, sans timeout/retry)",
     timeouts: { read: 8000, write: 8000 },
     retry: { enabled: false, max: 0, baseMs: 500, capMs: 4000, jitter: true },
-    useKey: false,
+    useKey: true,
   },
   {
     key: "resilient",
-    label: "Timeout + retry (sans clé)",
-    timeouts: { read: 1500, write: 3000 },
-    retry: { enabled: true, max: 3, baseMs: 500, capMs: 4000, jitter: true },
-    useKey: false,
-  },
-  {
-    key: "resilient_key",
-    label: "Timeout + retry + Idempotency-Key",
+    label: "Conforme + timeout + retry (cle honoree serveur)",
     timeouts: { read: 1500, write: 3000 },
     retry: { enabled: true, max: 3, baseMs: 500, capMs: 4000, jitter: true },
     useKey: true,
+  },
+  {
+    key: "no_key",
+    label: "Non conforme (sans cle) - controle d'enforcement -> 422",
+    timeouts: { read: 1500, write: 3000 },
+    retry: { enabled: false, max: 0, baseMs: 500, capMs: 4000, jitter: true },
+    useKey: false,
   },
 ];
 

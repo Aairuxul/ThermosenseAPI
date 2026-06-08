@@ -89,8 +89,18 @@ Audit associé : `audit/audits-recus/rapport_audit_groupe1.docx` (audit reçu) �
 **Livrable complet de la Note 4 (rendu début S8, avec la Note 3)** — *distinct de la Note 3 L2 (gouvernance)*
 - Endpoint critique : `POST /v1/sensors/{id}/measures` — mesures **réelles & reproductibles** (`node bench/run.js`)
 - §1 Plan de test (3 scénarios chiffrés, critères définis avant) · §2 Tableau avant/après (succès **82 %→100 %**, gel 8 s éliminé) · §3 Mécanismes retenus/écartés + volet sécurité · §4 Compromis
-- **Résultat clé** : `Idempotency-Key` exigée au contrat mais **inerte** (serveur ne l'honore pas) → doublons mesurés (14 en réf. B) non éliminables côté client → correctif serveur à trancher
+- **Résultat clé (mis à jour S9)** : `Idempotency-Key` exigée au contrat, **inerte en S8** (14 doublons) puis **implémentée serveur en S9** (`eee5c31`) → **0 doublon** sur les 3 scénarios. Risque résiduel déplacé vers la **disponibilité** (scénario C).
 - Preuves : [`note4/results/`](note4/results/) · harness : [`../bench/`](../bench/)
+
+### 15. [Note 5 — Dossier de projet (synthèse S1→S9)](15-note-5-dossier.md) ⭐
+**Livrable central de la Note 5** — 5 sections imposées :
+- **A** Contrat & décisions de design (versioning `/v1`, idempotence serveur, BOLA→404) · **B** Dossier de sécurité (threat model, audit 4,5→8/8, 37 tests, risques résiduels)
+- **C** SOA/SOAP (hybride : REST IoT + SOAP `BillingService`) · **D** Résilience (patterns, bench 82→100 %, 0 doublon, limite scénario C) · **E** Bilan (schéma, 3 décisions à refaire, axes prod)
+
+### 16. [Mémo décisionnel (2 pages)](16-memo-decisionnel.md) ⭐
+**Document de commission** — 3 décisions structurantes + risque résiduel assumé + **incident démontré** (doublon sur retry, S8→S9).
+
+> **Support de soutenance (Slidev, ≤ 12 slides)** : [`../soutenance/slides.md`](../soutenance/slides.md) — `npx @slidev/cli soutenance/slides.md`.
 
 ---
 
@@ -131,6 +141,6 @@ Contrôle d'accès basé sur les rôles (RBAC) et contrôle au niveau objet (BOL
 
 ---
 
-**Dernière mise à jour** : Avril 2026  
-**Maintenu par** : Équipe SmartPark IoT
+**Dernière mise à jour** : Juin 2026 (Note 5 — commission d'architecture S9)  
+**Maintenu par** : Groupe ThermoSense
 
