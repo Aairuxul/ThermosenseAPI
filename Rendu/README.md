@@ -85,6 +85,13 @@ Audit associé : `audit/audits-recus/rapport_audit_groupe1.docx` (audit reçu) �
 - Diff visible sur `contrat-openapi.yaml` (commits `2a1f340`, `3fe49b2`) + justification d'impact mobile/IoT
 - Plan interséance : 5 NC restantes du rapport — toutes traitées avant la livraison Note 3
 
+### 14. [Note 4 — Résilience mobile/IoT & mesures réseau dégradé](14-note-4.md) ⭐
+**Livrable complet de la Note 4 (rendu début S8, avec la Note 3)** — *distinct de la Note 3 L2 (gouvernance)*
+- Endpoint critique : `POST /v1/sensors/{id}/measures` — mesures **réelles & reproductibles** (`node bench/run.js`)
+- §1 Plan de test (3 scénarios chiffrés, critères définis avant) · §2 Tableau avant/après (succès **82 %→100 %**, gel 8 s éliminé) · §3 Mécanismes retenus/écartés + volet sécurité · §4 Compromis
+- **Résultat clé** : `Idempotency-Key` exigée au contrat mais **inerte** (serveur ne l'honore pas) → doublons mesurés (14 en réf. B) non éliminables côté client → correctif serveur à trancher
+- Preuves : [`note4/results/`](note4/results/) · harness : [`../bench/`](../bench/)
+
 ---
 
 ## 🔗 Documentation associée

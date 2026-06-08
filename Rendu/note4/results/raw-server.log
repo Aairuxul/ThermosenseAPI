@@ -1,0 +1,279 @@
+
+===== PASS A/baseline (port 64705) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64705
+Documentation Swagger disponible sur http://localhost:64705/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:11.249Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS A/resilient (port 64710) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64710
+Documentation Swagger disponible sur http://localhost:64710/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:11.743Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS A/resilient_key (port 64715) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64715
+Documentation Swagger disponible sur http://localhost:64715/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:12.232Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS B/baseline (port 64720) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64720
+Documentation Swagger disponible sur http://localhost:64720/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:12.713Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS B/resilient (port 64725) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64725
+Documentation Swagger disponible sur http://localhost:64725/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:13.187Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS B/resilient_key (port 64730) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64730
+Documentation Swagger disponible sur http://localhost:64730/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:13.673Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS C/baseline (port 64735) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64735
+Documentation Swagger disponible sur http://localhost:64735/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:14.139Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS C/resilient (port 64740) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64740
+Documentation Swagger disponible sur http://localhost:64740/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:14.600Z | SUCCESS | User: root | Role: admin | Login successful (user-1)
+
+===== PASS C/resilient_key (port 64745) =====
+🔄 Initialisation de la base de données...
+Seed: 2 zones, 7 capteurs, 4 actionneurs, 28 mesures, 3 seuils, 7 utilisateurs
+  Zone: Zone A — Entrepôt Nord (id: area-1)
+  Zone: Zone B — Bureaux Sud (id: area-2)
+  Capteur: temperature [active] (id: sensor-1, zone: area-1)
+  Capteur: temperature [active] (id: sensor-2, zone: area-1)
+  Capteur: humidity [active] (id: sensor-3, zone: area-1)
+  Capteur: temperature [inactive] (id: sensor-4, zone: area-1)
+  Capteur: temperature [active] (id: sensor-5, zone: area-2)
+  Capteur: humidity [active] (id: sensor-6, zone: area-2)
+  Capteur: temperature [active] (id: sensor-7, zone: area-2)
+  Actionneur: heater [on] (id: actuator-1, zone: area-1)
+  Actionneur: ventilation [auto] (id: actuator-2, zone: area-1)
+  Actionneur: heater [auto] (id: actuator-3, zone: area-2)
+  Actionneur: ventilation [off] (id: actuator-4, zone: area-2)
+  Utilisateur: Root Admin [admin] (id: user-1)
+  Utilisateur: Alice Admin [admin] (id: user-2)
+  Utilisateur: Bob Opérateur [operator] (id: user-3)
+  Utilisateur: Claire Opératrice [operator] (id: user-4)
+  Utilisateur: Robin Lecteur [reader] (id: user-5)
+  Utilisateur: Device Sensor 01 [device] (id: user-6)
+  Utilisateur: Device Actuator 01 [device] (id: user-7)
+✅ Base de données initialisée avec le seed
+
+✅ ThermoSense API démarrée sur http://localhost:64745
+Documentation Swagger disponible sur http://localhost:64745/api-docs
+Compte de test: email="root" password="root"
+
+[AUTH] 2026-06-08T07:14:15.139Z | SUCCESS | User: root | Role: admin | Login successful (user-1)

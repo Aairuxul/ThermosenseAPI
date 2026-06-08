@@ -44,8 +44,8 @@ app.use(express.json());
 
 // --- Rate limiting ---
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 tentatives par fenetre
+  windowMs: Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 10, // 10 tentatives par fenetre
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -59,8 +59,8 @@ const loginLimiter = rateLimit({
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // 100 requetes par minute
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 1 * 60 * 1000, // 1 minute
+  max: Number(process.env.RATE_LIMIT_MAX) || 100, // 100 requetes par minute
   standardHeaders: true,
   legacyHeaders: false,
   message: {
