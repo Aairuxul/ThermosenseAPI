@@ -3,6 +3,7 @@ const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
 const { requireRoles, requireScope, requireSensorAccess } = require("../authorization");
+const { problem } = require("../problem");
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.get(
   }
 );
 
+// POST /sensors
 router.post(
   "/",
   authenticate,
@@ -25,53 +27,36 @@ router.post(
   requireRoles("admin", "operator"),
   (req, res) => {
     const { type, status, areaId } = req.body;
-    const details = [];
+    const errors = [];
 
     if (!type) {
-      details.push({ field: "type", reason: "Le champ type est requis" });
+      errors.push({ field: "type", reason: "Le champ type est requis" });
     }
     if (!status) {
-      details.push({ field: "status", reason: "Le champ status est requis" });
+      errors.push({ field: "status", reason: "Le champ status est requis" });
     }
     if (!areaId) {
-      details.push({ field: "areaId", reason: "Le champ areaId est requis" });
+      errors.push({ field: "areaId", reason: "Le champ areaId est requis" });
     }
-
     if (type && !["temperature", "humidity"].includes(type)) {
-      details.push({
-        field: "type",
-        reason: "type doit etre temperature ou humidity",
-      });
+      errors.push({ field: "type", reason: "type doit etre temperature ou humidity" });
     }
-
     if (status && !["active", "inactive"].includes(status)) {
-      details.push({
-        field: "status",
-        reason: "status doit etre active ou inactive",
-      });
+      errors.push({ field: "status", reason: "status doit etre active ou inactive" });
     }
 
-    if (details.length > 0) {
-      return res.status(400).json({
-        code: "invalidParameter",
-        message: "Payload invalide",
-        details,
-      });
+    if (errors.length > 0) {
+      return problem(res, 400, "invalidParameter", "Payload invalide", { errors });
     }
 
     const area = db.areas.find((item) => item.id === areaId);
     if (!area) {
-      return res.status(404).json({
-        code: "notFound",
-        message: `Zone '${areaId}' introuvable`,
-      });
+      return problem(res, 404, "notFound", `Zone '${areaId}' introuvable`);
     }
 
+    // Masquage BOLA : un opérateur hors de sa zone reçoit le même 404 qu'une zone inexistante.
     if (req.user.role === "operator" && req.user.zone !== areaId) {
-      return res.status(404).json({
-        code: "notFound",
-        message: `Zone '${areaId}' non authorisée pour cet opérateur`,
-      });
+      return problem(res, 404, "notFound", `Zone '${areaId}' introuvable`);
     }
 
     const sensor = {

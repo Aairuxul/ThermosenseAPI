@@ -379,13 +379,13 @@ Le store en mémoire a bloqué la concurrence (ETag) et l'idempotence partagée 
 
 <div class="p-3 rounded border-l-4 border-amber-500">
 <b>3. Valider contrat <i>et</i> implémentation ensemble.</b>
-Tests de contrat (Schemathesis) → l'écart <code>429</code> aurait été détecté tôt.
+Tests de contrat (Schemathesis) : l'écart <code>429</code>, <b>résorbé en S9</b>, aurait été détecté automatiquement.
 </div>
 
 </div>
 
 <div class="pt-4 text-center text-sm opacity-80">
-Limites assumées : store mémoire · ETag non implémenté · secret JWT par défaut · écart 429.
+Limites assumées : store mémoire · ETag non implémenté · secret JWT par défaut.
 </div>
 
 <!--

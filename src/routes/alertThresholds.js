@@ -3,6 +3,8 @@ const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
 const { requireRoles, requireScope, requireAreaAccess } = require("../authorization");
+const { problem } = require("../problem");
+const { paginate } = require("../pagination");
 
 const router = Router();
 
@@ -16,46 +18,32 @@ router.get("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresh
     sensorIds.includes(t.sensorId)
   );
 
-  res.json(thresholds);
+  res.json(paginate(thresholds, req.query));
 });
 
 // POST /areas/:areaId/alert-thresholds (protégé)
 router.post("/:areaId/alert-thresholds", authenticate, requireScope("alert-thresholds:write"), requireRoles("admin", "operator"), requireAreaAccess, (req, res) => {
-
   const { sensorId, thresholdValue, comparisonOperator } = req.body;
-  const details = [];
+  const errors = [];
 
   if (!sensorId) {
-    details.push({ field: "sensorId", reason: "Le champ sensorId est requis" });
+    errors.push({ field: "sensorId", reason: "Le champ sensorId est requis" });
   }
   if (thresholdValue === undefined || thresholdValue === null) {
-    details.push({
-      field: "thresholdValue",
-      reason: "Le champ thresholdValue est requis",
-    });
+    errors.push({ field: "thresholdValue", reason: "Le champ thresholdValue est requis" });
   }
   if (!comparisonOperator) {
-    details.push({
-      field: "comparisonOperator",
-      reason: "Le champ comparisonOperator est requis",
-    });
+    errors.push({ field: "comparisonOperator", reason: "Le champ comparisonOperator est requis" });
   }
   if (
     comparisonOperator &&
     !["greaterThan", "lessThan", "equalTo"].includes(comparisonOperator)
   ) {
-    details.push({
-      field: "comparisonOperator",
-      reason: "comparisonOperator doit être greaterThan, lessThan ou equalTo",
-    });
+    errors.push({ field: "comparisonOperator", reason: "comparisonOperator doit être greaterThan, lessThan ou equalTo" });
   }
 
-  if (details.length > 0) {
-    return res.status(400).json({
-      code: "invalidParameter",
-      message: "Payload invalide",
-      details,
-    });
+  if (errors.length > 0) {
+    return problem(res, 400, "invalidParameter", "Payload invalide", { errors });
   }
 
   // Vérifier que le capteur appartient à cette zone
@@ -63,9 +51,8 @@ router.post("/:areaId/alert-thresholds", authenticate, requireScope("alert-thres
     (s) => s.id === sensorId && s.areaId === req.params.areaId
   );
   if (!sensorInZone) {
-    return res.status(400).json({
-      code: "invalidParameter",
-      message: "Le capteur spécifié n'appartient pas à cette zone",
+    return problem(res, 400, "invalidParameter", "Le capteur spécifié n'appartient pas à cette zone", {
+      errors: [{ field: "sensorId", reason: "Le capteur spécifié n'appartient pas à cette zone" }],
     });
   }
 

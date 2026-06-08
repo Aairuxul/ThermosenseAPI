@@ -55,8 +55,8 @@ client, **conçue mais non implémentée** (faute de temps). → L'**intégrité
 (0 doublon) ; la **disponibilité** est le prochain chantier, clairement nommé.
 
 *Autres limites assumées* : store en mémoire (données + idempotence) ; concurrence ETag/`If-Match` **conçue
-mais non implémentée** sur `PUT` (last-write-wins) ; secret JWT par défaut dans le code ; écart contrat/impl
-sur le `429`. Détail et mitigations : [dossier §B.4 et §D.3](./15-note-5-dossier.md#section-b--dossier-de-sécurité).
+mais non implémentée** sur `PUT` (last-write-wins) ; secret JWT par défaut dans le code. Détail et
+mitigations : [dossier §B.4 et §D.3](./15-note-5-dossier.md#section-b--dossier-de-sécurité).
 
 ## Incident que nous allons démontrer
 

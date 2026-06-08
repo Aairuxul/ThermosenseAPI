@@ -216,8 +216,6 @@ Endpoint critique : **`POST /v1/sensors/{id}/measures`** (ingestion IoT en entre
   temps). L'**intégrité** est acquise (0 doublon) ; la **disponibilité** est le prochain chantier.
 - **Retry non adaptatif** : sur bon réseau (scénario A), le retry agressif est **net négatif** (aucun gain de
   latence, +req) → une activation **conditionnelle** aux conditions mesurées serait préférable.
-- **Écart contrat/implémentation `429`** : le contrat spécifie `rateLimitExceeded` + `Retry-After` ;
-  l'implémentation renvoie `tooManyRequests` + en-têtes `RateLimit-*` ([`14 §3.4`](./14-note-4.md)).
 
 ---
 
@@ -253,7 +251,9 @@ facturation B2B est **isolée** derrière un proxy vers le service SOAP.
    mais a **bloqué** la concurrence (ETag/If-Match conçue mais non implémentable proprement) et imposé un store
    d'idempotence mono-process. C'est la décision à plus fort **effet de levier** rétrospectivement.
 3. **Valider le contrat *et* l'implémentation ensemble** (tests de contrat type Schemathesis). L'écart `429`
-   (contrat vs `express-rate-limit`) aurait été détecté tôt par un test de conformité, pas en relecture.
+   (contrat vs `express-rate-limit`), **résorbé en S9** (réponses `rateLimitExceeded` + `Retry-After`, et
+   passage de **toutes** les erreurs en Problem Details `application/problem+json`), aurait été détecté
+   automatiquement par un test de conformité plutôt qu'en relecture manuelle.
 
 ### E.3 Axes prioritaires pour un passage en production
 
@@ -263,7 +263,8 @@ facturation B2B est **isolée** derrière un proxy vers le service SOAP.
 3. **Durcissement sécurité** : secret JWT hors-code + rotation (voire RS256), HTTPS forcé (HSTS), validation
    d'entrée exhaustive, scan de dépendances bloquant en CI.
 4. **Observabilité** : métriques (taux d'erreur, p95, doublons évités), traçage des refus d'accès, alerting.
-5. **Aligner le contrat `429`** et activer en CI les règles Spectral custom + `oasdiff` (anti-breaking).
+5. **Tests de contrat en CI** : règles Spectral custom + `oasdiff` (anti-breaking) pour verrouiller en continu
+   la cohérence contrat↔implémentation (l'écart `429` identifié a été résorbé en S9).
 
 > **Ce que la commission cherche** : non pas un projet sans défaut, mais des **compromis assumés avec des
 > raisons techniques**. Notre fil conducteur — *mesurer avant de décider* — a transformé une garantie

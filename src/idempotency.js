@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { problem } = require("./problem");
 
 // Fenetre de deduplication : 24 h (cf. contrat OpenAPI, components/parameters/IdempotencyKey).
 const DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -40,10 +41,7 @@ function idempotency(req, res, next) {
   const key = req.headers["idempotency-key"];
 
   if (!key || !UUID_REGEX.test(key)) {
-    return res.status(422).json({
-      code: "idempotencyKeyMissing",
-      message: "Header 'Idempotency-Key' absent ou mal forme (format UUID attendu)",
-    });
+    return problem(res, 422, "idempotencyKeyMissing", "Header 'Idempotency-Key' absent ou mal forme (format UUID attendu)");
   }
 
   const bodyHash = hashBody(req.body);
@@ -56,10 +54,7 @@ function idempotency(req, res, next) {
       return res.status(existing.status).json(existing.body);
     }
     // Meme cle reutilisee avec un body different dans la fenetre de deduplication.
-    return res.status(409).json({
-      code: "idempotencyConflict",
-      message: "La cle 'Idempotency-Key' a deja ete utilisee avec un contenu different",
-    });
+    return problem(res, 409, "idempotencyConflict", "La cle 'Idempotency-Key' a deja ete utilisee avec un contenu different");
   }
 
   // Entree absente ou expiree : on traite la requete et on memorise la reponse en cas de succes.

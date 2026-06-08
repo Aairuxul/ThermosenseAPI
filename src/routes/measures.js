@@ -4,19 +4,15 @@ const { nextId } = require("../id");
 const { authenticate } = require("../auth");
 const { requireRoles, requireScope, requireSensorAccess } = require("../authorization");
 const { idempotency } = require("../idempotency");
+const { problem } = require("../problem");
+const { paginate } = require("../pagination");
 
 const router = Router();
 
 // GET /sensors/:sensorId/measures
 router.get("/:sensorId/measures", authenticate, requireScope("measures:read"), requireRoles("admin", "operator", "reader", "device"), requireSensorAccess, (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 99, 499);
-  const offset = parseInt(req.query.offset) || 0;
-
-  const data = db.measures
-    .filter((m) => m.sensorId === req.params.sensorId)
-    .slice(offset, offset + limit);
-
-  res.json({ data });
+  const measures = db.measures.filter((m) => m.sensorId === req.params.sensorId);
+  res.json(paginate(measures, req.query));
 });
 
 // POST /sensors/:sensorId/measures (protégé)
@@ -24,28 +20,21 @@ router.post("/:sensorId/measures", authenticate, requireScope("measures:write"),
   const sensor = req.sensor;
 
   if (sensor.status === "inactive") {
-    return res.status(409).json({
-      code: "deviceUnavailable",
-      message: `Le capteur '${sensor.id}' est actuellement hors ligne`,
-    });
+    return problem(res, 409, "sensorUnavailable", `Le capteur '${sensor.id}' est actuellement hors ligne`);
   }
 
   const { timestamp, value } = req.body;
-  const details = [];
+  const errors = [];
 
   if (!timestamp) {
-    details.push({ field: "timestamp", reason: "Le champ timestamp est requis" });
+    errors.push({ field: "timestamp", reason: "Le champ timestamp est requis" });
   }
   if (value === undefined || value === null) {
-    details.push({ field: "value", reason: "Le champ value est requis" });
+    errors.push({ field: "value", reason: "Le champ value est requis" });
   }
 
-  if (details.length > 0) {
-    return res.status(400).json({
-      code: "invalidParameter",
-      message: "Payload invalide",
-      details,
-    });
+  if (errors.length > 0) {
+    return problem(res, 400, "invalidParameter", "Payload invalide", { errors });
   }
 
   const measure = {

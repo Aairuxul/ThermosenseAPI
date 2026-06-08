@@ -1,5 +1,6 @@
 const db = require('./store');
 const { logAuthz } = require('./security-logger');
+const { problem } = require('./problem');
 
 function getCurrentUser(req) {
     const userId = req.user && (req.user.userId || req.user.sub);
@@ -35,24 +36,15 @@ function hasScope(reqUser, requiredScope) {
 }
 
 function denyUnauthorized(res) {
-    return res.status(401).json({
-        code: 'unauthorized',
-        message: 'Utilisateur non authentifié',
-    });
+    return problem(res, 401, 'unauthorized', 'Utilisateur non authentifié');
 }
 
 function denyForbidden(res) {
-    return res.status(403).json({
-        code: 'forbidden',
-        message: 'Action interdite',
-    });
+    return problem(res, 403, 'forbidden', 'Action interdite');
 }
 
 function denyNotFound(res, entityName, entityId) {
-    return res.status(404).json({
-        code: 'notFound',
-        message: `${entityName} '${entityId}' introuvable`,
-    });
+    return problem(res, 404, 'notFound', `${entityName} '${entityId}' introuvable`);
 }
 
 function requireScope(requiredScope) {

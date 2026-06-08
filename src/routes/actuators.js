@@ -9,38 +9,35 @@ const {
   requireActuatorAccess,
 } = require("../authorization");
 const { idempotency } = require("../idempotency");
+const { problem } = require("../problem");
+const { paginate } = require("../pagination");
 
 const areaActuatorsRouter = Router();
 const actuatorsRouter = Router();
 
 // GET /areas/:areaId/actuators
 areaActuatorsRouter.get("/:areaId/actuators", authenticate, requireScope("actuators:read"), requireRoles("admin", "operator", "reader"), requireAreaAccess, (req, res) => {
-  const data = db.actuators.filter((a) => a.areaId === req.params.areaId);
-  res.json({ data });
+  const actuators = db.actuators.filter((a) => a.areaId === req.params.areaId);
+  res.json(paginate(actuators, req.query));
 });
 
 // POST /areas/:areaId/actuators (protégé)
 areaActuatorsRouter.post("/:areaId/actuators", authenticate, requireScope("actuators:write"), requireRoles("admin", "operator"), requireAreaAccess, (req, res) => {
-
   const { type, state } = req.body;
-  const details = [];
+  const errors = [];
 
   if (!type) {
-    details.push({ field: "type", reason: "Le champ type est requis" });
+    errors.push({ field: "type", reason: "Le champ type est requis" });
   }
   if (!state) {
-    details.push({ field: "state", reason: "Le champ state est requis" });
+    errors.push({ field: "state", reason: "Le champ state est requis" });
   }
   if (state && !["on", "off", "auto"].includes(state)) {
-    details.push({ field: "state", reason: "state doit être on, off ou auto" });
+    errors.push({ field: "state", reason: "state doit être on, off ou auto" });
   }
 
-  if (details.length > 0) {
-    return res.status(400).json({
-      code: "invalidParameter",
-      message: "Payload invalide",
-      details,
-    });
+  if (errors.length > 0) {
+    return problem(res, 400, "invalidParameter", "Payload invalide", { errors });
   }
 
   const actuator = {
@@ -65,9 +62,8 @@ actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"
 
   const { state } = req.body;
   if (!state || !["on", "off", "auto"].includes(state)) {
-    return res.status(400).json({
-      code: "invalidParameter",
-      message: "Le champ state est requis et doit être on, off ou auto",
+    return problem(res, 400, "invalidParameter", "Le champ state est requis et doit être on, off ou auto", {
+      errors: [{ field: "state", reason: "state est requis et doit être on, off ou auto" }],
     });
   }
 

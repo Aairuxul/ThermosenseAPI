@@ -182,6 +182,60 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      summary: Renouveler les tokens à partir d'un refresh token
+      description: |
+        Échange un refresh token valide contre un nouvel access token et un nouveau
+        refresh token (rotation). Permet à un client mobile de prolonger sa session
+        sans redemander les identifiants, l'access token ayant une durée de vie courte
+        (30 min par défaut).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh token JWT obtenu via `/auth/login`.
+            example:
+              refreshToken: "FAKE_REFRESH_TOKEN_example_do_not_use"
+      responses:
+        "200":
+          description: Nouveaux tokens générés.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, refreshToken]
+                properties:
+                  token:
+                    type: string
+                    description: Nouvel access token JWT (courte durée de vie).
+                  refreshToken:
+                    type: string
+                    description: Nouveau refresh token (le précédent ne doit plus être utilisé).
+              example:
+                token: "FAKE_JWT_ACCESS_TOKEN_do_not_use"
+                refreshToken: "FAKE_JWT_REFRESH_TOKEN_do_not_use"
+        "400":
+          description: Refresh token manquant dans la requête.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Refresh token invalide ou expiré.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /areas:
     get:
       tags: [Areas]
@@ -286,6 +340,78 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
         
+  /sensors:
+    post:
+      tags: [Sensors]
+      operationId: createSensor
+      summary: Créer un capteur dans une zone.
+      description: |
+        Enregistre un nouveau capteur et le rattache à une zone existante.
+        **Requiert une authentification.**
+
+        **Roles autorises:** `admin`, `operator`
+
+        - `operator` : création limitée aux capteurs de sa propre zone
+      security:
+        - BearerAuth: []
+      x-required-roles: [admin, operator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, status, areaId]
+              properties:
+                type:
+                  type: string
+                  enum: [temperature, humidity]
+                  description: Type de capteur.
+                status:
+                  type: string
+                  enum: [active, inactive]
+                  description: Statut opérationnel initial du capteur.
+                areaId:
+                  type: string
+                  pattern: "^area-[0-9]+$"
+                  description: Zone de rattachement (format `area-{n}`).
+            example:
+              type: "temperature"
+              status: "active"
+              areaId: "area-1"
+      responses:
+        "201":
+          description: Capteur créé.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sensors"
+              example:
+                id: "sensor-8"
+                type: "temperature"
+                status: "active"
+                areaId: "area-1"
+        "400":
+          description: Payload invalide (champ manquant ou valeur d'enum non autorisée).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: |
+            Zone de rattachement introuvable. Pour un `operator`, une zone hors de son
+            périmètre renvoie également `404` (masquage BOLA).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
   /sensors/{sensorId}:
     get:
       tags: [Sensors]

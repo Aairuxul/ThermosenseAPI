@@ -153,7 +153,7 @@ curl -s -X PUT http://localhost:3000/v1/actuators/actuator-1 \
 > **Comprendre une erreur sans aide** : toutes les erreurs suivent le format **Problem Details
 > (`application/problem+json`)** avec un champ `code` stable. Exemples : `unauthorized` (401),
 > `forbidden` (403), `notFound` (404), `invalidParameter` (400), `idempotencyKeyMissing` (422),
-> `idempotencyConflict` (409), `deviceUnavailable` (409), `tooManyRequests` (429).
+> `idempotencyConflict` (409), `sensorUnavailable` (409), `rateLimitExceeded` (429).
 
 ---
 
@@ -270,5 +270,3 @@ quality gate, et résilience (Note 4).
   mémoire (mono-process).
 - **Disponibilité sous panne réseau sévère** : le retry client borne le gel mais ne suffit pas en perte
   ≥ 50 % (cf. Note 4, scénario C) — une file locale + backpressure restent à implémenter.
-- **Écart contrat/implémentation sur le `429`** : code et headers de rate limiting documentés mais non
-  totalement alignés sur le contrat (cf. [`Rendu/14-note-4.md`](./Rendu/14-note-4.md) § 3.4).

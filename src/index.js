@@ -6,6 +6,7 @@ const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
 const path = require("path");
 const { logRateLimit } = require("./security-logger");
+const { problem } = require("./problem");
 
 const db = require("./store");
 const authRouter = require("./routes/auth");
@@ -46,30 +47,28 @@ app.use(express.json());
 const loginLimiter = rateLimit({
   windowMs: Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   max: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 10, // 10 tentatives par fenetre
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    code: "tooManyRequests",
-    message: "Trop de tentatives de connexion. Reessayez dans 15 minutes.",
-  },
-  handler: (req, res, next, options) => {
+  standardHeaders: true, // RateLimit-* (draft IETF) + Retry-After
+  legacyHeaders: true, // X-RateLimit-* (documentés dans le contrat)
+  handler: (req, res) => {
     logRateLimit(req.ip, "/auth/login");
-    res.status(429).json(options.message);
+    problem(res, 429, "rateLimitExceeded", "Trop de tentatives de connexion. Réessayez dans 15 minutes.", {
+      type: "https://thermosense.com/errors/rate-limit",
+      instance: req.originalUrl,
+    });
   },
 });
 
 const apiLimiter = rateLimit({
   windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 1 * 60 * 1000, // 1 minute
   max: Number(process.env.RATE_LIMIT_MAX) || 100, // 100 requetes par minute
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    code: "tooManyRequests",
-    message: "Trop de requetes. Reessayez dans quelques instants.",
-  },
-  handler: (req, res, next, options) => {
+  standardHeaders: true, // RateLimit-* (draft IETF) + Retry-After
+  legacyHeaders: true, // X-RateLimit-* (documentés dans le contrat)
+  handler: (req, res) => {
     logRateLimit(req.ip, req.path);
-    res.status(429).json(options.message);
+    problem(res, 429, "rateLimitExceeded", "Trop de requetes. Réessayez dans quelques instants.", {
+      type: "https://thermosense.com/errors/rate-limit",
+      instance: req.originalUrl,
+    });
   },
 });
 
@@ -140,10 +139,7 @@ app.use("/v1/users", apiLimiter, usersRouter);
 
 // 404 pour les routes non définies
 app.use((req, res) => {
-  res.status(404).json({
-    code: "notFound",
-    message: `Route ${req.method} ${req.path} introuvable`,
-  });
+  problem(res, 404, "notFound", `Route ${req.method} ${req.path} introuvable`, { instance: req.originalUrl });
 });
 
 // Gestionnaire d'erreurs global
@@ -152,33 +148,23 @@ app.use((err, req, res, next) => {
   
   // Erreur de base de données non initialisée
   if (err.message && err.message.includes("Database not yet initialized")) {
-    return res.status(503).json({
-      code: "serviceUnavailable",
-      message: "La base de données est en cours d'initialisation. Veuillez réessayer dans quelques secondes.",
-    });
+    return problem(res, 503, "serviceUnavailable", "La base de données est en cours d'initialisation. Veuillez réessayer dans quelques secondes.", { instance: req.originalUrl });
   }
-  
+
   // Erreur JWT
   if (err.name === "JsonWebTokenError") {
-    return res.status(401).json({
-      code: "unauthorized",
-      message: "Token JWT invalide",
-    });
+    return problem(res, 401, "unauthorized", "Token JWT invalide", { instance: req.originalUrl });
   }
-  
+
   if (err.name === "TokenExpiredError") {
-    return res.status(401).json({
-      code: "unauthorized",
-      message: "Token JWT expiré",
-    });
+    return problem(res, 401, "unauthorized", "Token JWT expiré", { instance: req.originalUrl });
   }
-  
-  // Erreur générique
-  res.status(500).json({
-    code: "internalError",
-    message: "Une erreur interne est survenue",
-    details: process.env.NODE_ENV !== "production" ? err.message : undefined,
-  });
+
+  // Erreur générique — le détail technique n'est exposé qu'en dev.
+  const detail = process.env.NODE_ENV !== "production" && err.message
+    ? `Une erreur interne est survenue : ${err.message}`
+    : "Une erreur interne est survenue";
+  problem(res, 500, "internalError", detail, { instance: req.originalUrl });
 });
 
 // Initialiser la base de données puis démarrer le serveur

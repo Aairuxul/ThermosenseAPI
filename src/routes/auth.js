@@ -7,6 +7,7 @@ const {
   verifyRefreshToken,
 } = require("../auth");
 const { logAuth } = require("../security-logger");
+const { problem } = require("../problem");
 
 const router = Router();
 
@@ -20,10 +21,8 @@ router.post("/login", async (req, res, next) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({
-        code: "invalidParameter",
-        message: "Email et password sont requis",
-        details: [
+      return problem(res, 400, "invalidParameter", "Email et password sont requis", {
+        errors: [
           ...(!email ? [{ field: "email", reason: "Le champ email est requis" }] : []),
           ...(!password ? [{ field: "password", reason: "Le champ password est requis" }] : []),
         ],
@@ -35,10 +34,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!user || !user.password) {
       logAuth('FAILURE', email, null, 'Unknown email');
-      return res.status(401).json({
-        code: "unauthorized",
-        message: "Email ou mot de passe incorrect",
-      });
+      return problem(res, 401, "unauthorized", "Email ou mot de passe incorrect");
     }
 
     // Vérifier le password
@@ -46,10 +42,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!isValidPassword) {
       logAuth('FAILURE', email, user.role, 'Invalid password');
-      return res.status(401).json({
-        code: "unauthorized",
-        message: "Email ou mot de passe incorrect",
-      });
+      return problem(res, 401, "unauthorized", "Email ou mot de passe incorrect");
     }
 
     // Générer les tokens JWT
@@ -81,10 +74,8 @@ router.post("/refresh", (req, res) => {
   const { refreshToken } = req.body || {};
 
   if (!refreshToken) {
-    return res.status(400).json({
-      code: "invalidParameter",
-      message: "Le champ refreshToken est requis",
-      details: [{ field: "refreshToken", reason: "Le champ refreshToken est requis" }],
+    return problem(res, 400, "invalidParameter", "Le champ refreshToken est requis", {
+      errors: [{ field: "refreshToken", reason: "Le champ refreshToken est requis" }],
     });
   }
 
@@ -94,10 +85,7 @@ router.post("/refresh", (req, res) => {
     const user = db.users.find((u) => u.id === userId);
 
     if (!user) {
-      return res.status(401).json({
-        code: "unauthorized",
-        message: "Refresh token invalide",
-      });
+      return problem(res, 401, "unauthorized", "Refresh token invalide");
     }
 
     const newAccessToken = generateAccessToken(user);
@@ -108,10 +96,7 @@ router.post("/refresh", (req, res) => {
       refreshToken: newRefreshToken,
     });
   } catch (error) {
-    return res.status(401).json({
-      code: "unauthorized",
-      message: "Refresh token invalide ou expiré",
-    });
+    return problem(res, 401, "unauthorized", "Refresh token invalide ou expiré");
   }
 });
 

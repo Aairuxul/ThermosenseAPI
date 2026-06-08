@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { logAuth } = require('./security-logger');
+const { problem } = require('./problem');
 
 // Clé secrète JWT (dans un vrai projet, utilisez une variable d'environnement)
 const JWT_SECRET = process.env.JWT_SECRET || 'thermosense-secret-key-change-in-production';
@@ -50,30 +51,21 @@ function authenticate(req, res, next) {
 
     if (!authHeader) {
         logAuth('FAILURE', null, null, 'Missing or malformed Authorization header');
-        return res.status(401).json({
-            code: 'unauthorized',
-            message: "Token d'authentification manquant ou invalide",
-        });
+        return problem(res, 401, 'unauthorized', "Token d'authentification manquant ou invalide");
     }
 
     const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
 
     if (!bearerMatch) {
         logAuth('FAILURE', null, null, 'Missing or malformed Authorization header');
-        return res.status(401).json({
-            code: 'unauthorized',
-            message: "Token d'authentification manquant ou invalide",
-        });
+        return problem(res, 401, 'unauthorized', "Token d'authentification manquant ou invalide");
     }
 
     const token = normalizeAuthorizationToken(bearerMatch[1]);
 
     if (!token) {
         logAuth('FAILURE', null, null, 'Missing token after Bearer prefix');
-        return res.status(401).json({
-            code: 'unauthorized',
-            message: "Token d'authentification manquant ou invalide",
-        });
+        return problem(res, 401, 'unauthorized', "Token d'authentification manquant ou invalide");
     }
 
     try {
@@ -83,20 +75,14 @@ function authenticate(req, res, next) {
         });
 
         if (decoded.tokenType !== 'access') {
-            return res.status(401).json({
-                code: 'unauthorized',
-                message: 'Type de token invalide',
-            });
+            return problem(res, 401, 'unauthorized', 'Type de token invalide');
         }
 
         req.user = decoded; // { sub, userId, email, role, scope, aud, exp, ... }
         next();
     } catch (err) {
         logAuth('FAILURE', null, null, `Token rejected: ${err.message}`);
-        return res.status(401).json({
-            code: 'unauthorized',
-            message: 'Token invalide ou expiré',
-        });
+        return problem(res, 401, 'unauthorized', 'Token invalide ou expiré');
     }
 }
 
