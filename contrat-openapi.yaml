@@ -1019,14 +1019,15 @@ components:
 
         **Fenêtre de déduplication :** 24 heures à compter de la première requête. Au-delà, la clé peut être réutilisée.
 
-        **Format recommandé :** UUID v4 généré côté client et persisté jusqu'à confirmation de réception.
+        **Format requis :** UUID v4 (36 caractères, forme `8-4-4-4-12`) généré côté client et persisté jusqu'à confirmation de réception. Toute valeur non conforme au format UUID est rejetée (`422`).
 
         **Pourquoi c'est obligatoire :** un client mobile/IoT en perte réseau retente automatiquement après timeout. Sans cette clé, un retry sur une commande actionneur ou un envoi de mesure crée un doublon (double allumage, mesure dupliquée).
       schema:
         type: string
         format: uuid
-        minLength: 8
-        maxLength: 128
+        minLength: 36
+        maxLength: 36
+        pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
         example: "a3f1c8e2-5b4d-4f9e-a7c6-1d2e3f4a5b6c"
     limit:
       name: limit
