@@ -73,7 +73,7 @@ Cartographie des vérifications d'accès dans l'application.
 
 Audit associé : `audit/audits-recus/rapport_audit_groupe1.docx` (audit reçu) · `audit/nos-audits/rapport-audit-produit.md` (audit produit par notre groupe).
 
-### 12. [Quality gate API](12-quality-gate.md) ⭐
+### 12. [Quality gate API](12-quality-gate-api.md) ⭐
 **Livrable Séance 6-7 — Phase 4B (graine Note 3 § 2.3)**
 - 5 règles bloquantes (B1-B5) + 3 avertissements (W1-W3) au format « Si ... alors ... »
 - Lint OpenAPI (Spectral) + tests de contrat (Schemathesis) + détection breaking change (`oasdiff`)

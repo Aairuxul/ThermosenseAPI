@@ -10,7 +10,7 @@
 | **Preuves** | [`note4/results/`](./note4/results/) : `results.json`, `summary.txt`, `traces.json`, `raw-server.log` |
 
 > **Périmètre.** Ce dossier traite la **résilience** (Note 4). Il est **distinct** de la Note 3 L2
-> (gouvernance / audit / quality gate, cf. [`11-note-3.md`](./11-note-3.md), [`12-quality-gate.md`](./12-quality-gate.md)).
+> (gouvernance / audit / quality gate, cf. [`11-note-3.md`](./11-note-3.md), [`12-quality-gate-api.md`](./12-quality-gate-api.md)).
 > Le tableau avant/après ci-dessous ne figure **pas** dans le dossier de gouvernance.
 
 **Cadrage (N1 — « que mesurer avant de coder ? »).** Avant tout mécanisme, on a fixé les trois sources
@@ -239,24 +239,23 @@ Le retry gère aussi le `429`, mais l'implémentation diverge du contrat : `src/
 
 ## Section 4 — Paragraphe de compromis
 
-**Ce que nous avons gagné.** Sur le scénario terrain de référence (B, 20 % de perte), les mécanismes client
-font passer le **taux de succès de 82 % à 100 %** et **éliminent le gel de 8 s** (p95 8 000 → 4 913 ms) :
-suffisant pour qu'un opérateur en entrepôt obtienne un retour borné et fiable.
+**Ce que nous avons gagné.** Sur le scénario de référence (B, 20 % de perte), les mécanismes client font
+passer le **taux de succès de 82 % à 100 %** et **éliminent le gel de 8 s** (p95 8 000 → 4 913 ms) : un
+retour borné et fiable pour l'opérateur en entrepôt.
 
 **Ce que nous avons perdu / complexifié.** Le gain n'est **pas gratuit**. Le retry sur une écriture non
-dédupliquée **crée des doublons** (14 en B) qui faussent moyennes et seuils, augmente la **consommation réseau
-et batterie** (+23 % en B), et **alourdit la latence de queue** quand le réseau se dégrade. Surtout,
-l'`Idempotency-Key` exigée par le contrat est **inerte** : à conditions identiques, avec ou sans clé, on mesure
-**exactement les mêmes 14 doublons** — la protection est **décorative tant que le serveur ne l'honore pas**. Et
-en panne partielle (C), le retry devient **contre-productif** : 66 % de succès seulement, p95 à 14 s, charge
-réseau **×3** (170 req/min) et **107 doublons**, dont certains sur des opérations *échouées*.
+dédupliquée **crée des doublons** (14 en B) qui faussent moyennes et seuils, alourdit la **consommation
+réseau/batterie** (+23 % en B) et la **latence de queue**. Surtout, l'`Idempotency-Key` exigée par le contrat
+est **inerte** : à conditions identiques, avec ou sans clé, on mesure **les mêmes 14 doublons** — protection
+**décorative tant que le serveur ne l'honore pas**. En panne partielle (C), le retry devient
+**contre-productif** : 66 % de succès, p95 à 14 s, charge réseau **×3** (170 req/min), **107 doublons** dont
+certains sur opérations *échouées*.
 
-**Ce qui reste ouvert (décisions avant soutenance).** (1) **Implémenter la déduplication serveur** de
-l'`Idempotency-Key` (contrat l. 1007‑1030, commit `3fe49b2`) — sans elle, le « 0 doublon » est inatteignable.
-(2) **Ajouter une file d'attente locale + backpressure** côté client pour le cas C (anti-tempête, anti-perte).
-(3) **Rendre le retry adaptatif** (le désactiver quand le réseau est bon, cf. scénario A net négatif).
-(4) **Aligner le contrat 429** (`Retry-After`, code `rateLimitExceeded`). Le gain de disponibilité est acquis ;
-l'**intégrité** dépend d'une décision d'**architecture serveur**, pas d'un réglage client.
+**Ce qui reste ouvert.** (1) **Dédupliquer côté serveur** l'`Idempotency-Key` (contrat l. 1007‑1030) — sans
+cela, le « 0 doublon » est inatteignable. (2) **File locale + backpressure** côté client pour le cas C.
+(3) **Retry adaptatif** (désactivé quand le réseau est bon, cf. A net négatif). (4) **Aligner le contrat 429**.
+Le gain de disponibilité est acquis ; l'**intégrité** dépend d'une décision d'**architecture serveur**, pas
+d'un réglage client.
 
 ---
 
