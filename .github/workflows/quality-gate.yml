@@ -40,7 +40,7 @@ jobs:
                   echo "## Quality Gate Results" > $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "### 1. OpenAPI Lint" >> $GITHUB_STEP_SUMMARY
-                  npx @stoplight/spectral-cli lint contrat-openapi.yaml --format json > lint-results.json 2>&1 || true
+                  npx @stoplight/spectral-cli lint contrat-openapi.yaml --format json --output lint-results.json || true
 
                   ERROR_COUNT=$(jq '[.[] | select(.severity == 0)] | length' lint-results.json)
                   echo "Erreurs détectées: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
