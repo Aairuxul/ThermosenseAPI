@@ -1,14 +1,14 @@
 ThermoSense — Mesures résilience réseau dégradé (Note 4)
-Généré : 2026-06-08T07:14:15.266Z
+Généré : 2026-06-08T09:24:57.509Z
 Endpoint : POST /v1/sensors/sensor-1/measures | N=100 ops/pass | seed=20260608
 
 Scénario	Variante	Succès%	p50ms	p95ms	maxms	retr/req	req/min	doublons
 A	baseline	97	364	498	8000	0	60	0
-A	resilient	100	364	498	7387	0.04	62	2
-A	resilient_key	100	364	498	7387	0.04	62	2
+A	resilient	100	364	498	7387	0.04	62	0
+A	no_key	0	364	498	3000	0	60	0
 B	baseline	82	1169	8000	8000	0	60	0
-B	resilient	100	1169	4913	11753	0.24	74	14
-B	resilient_key	100	1169	4913	11753	0.24	74	14
+B	resilient	100	1169	4913	11753	0.24	74	0
+B	no_key	0	1169	3000	3000	0	60	0
 C	baseline	52	3875	8000	8000	0	60	0
-C	resilient	66	9799	14416	14953	1.83	170	107
-C	resilient_key	66	9799	14416	14953	1.83	170	107
+C	resilient	66	9799	14416	14953	1.83	170	0
+C	no_key	0	3000	3000	3000	0	60	0

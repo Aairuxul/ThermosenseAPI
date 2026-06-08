@@ -1,13 +1,16 @@
 {
     "name": "thermosenseapi",
     "version": "1.0.0",
-    "description": "ThermosenseAPI",
-    "main": "index.js",
+    "description": "ThermoSense API — web service REST de supervision de capteurs et de pilotage d'actionneurs IoT pour le confort thermique des bâtiments.",
+    "main": "src/index.js",
     "scripts": {
         "start": "node src/index.js",
         "dev": "node --watch src/index.js",
+        "test": "npm run test:auth && npm run test:cadrage",
         "test:auth": "node tests/auth.test.js",
-        "test:cadrage": "node tests/cadrage.test.js"
+        "test:cadrage": "node tests/cadrage.test.js",
+        "lint": "spectral lint contrat-openapi.yaml",
+        "bench": "node bench/run.js"
     },
     "repository": {
         "type": "git",
@@ -32,6 +35,6 @@
         "yamljs": "^0.3.0"
     },
     "devDependencies": {
-        "@stoplight/spectral": "^6.5.0"
+        "@stoplight/spectral-cli": "^6.16.0"
     }
 }
