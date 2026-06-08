@@ -8,6 +8,7 @@ const {
   requireAreaAccess,
   requireActuatorAccess,
 } = require("../authorization");
+const { idempotency } = require("../idempotency");
 
 const areaActuatorsRouter = Router();
 const actuatorsRouter = Router();
@@ -59,7 +60,7 @@ actuatorsRouter.get("/:actuatorId", authenticate, requireScope("actuators:read")
 });
 
 // PUT /actuators/:actuatorId (protégé)
-actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"), requireRoles("admin", "operator"), requireActuatorAccess, (req, res) => {
+actuatorsRouter.put("/:actuatorId", authenticate, requireScope("actuators:write"), requireRoles("admin", "operator"), requireActuatorAccess, idempotency, (req, res) => {
   const actuator = req.actuator;
 
   const { state } = req.body;

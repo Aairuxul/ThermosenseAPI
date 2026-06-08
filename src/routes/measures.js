@@ -3,6 +3,7 @@ const db = require("../store");
 const { nextId } = require("../id");
 const { authenticate } = require("../auth");
 const { requireRoles, requireScope, requireSensorAccess } = require("../authorization");
+const { idempotency } = require("../idempotency");
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get("/:sensorId/measures", authenticate, requireScope("measures:read"), r
 });
 
 // POST /sensors/:sensorId/measures (protégé)
-router.post("/:sensorId/measures", authenticate, requireScope("measures:write"), requireRoles("admin", "device"), requireSensorAccess, (req, res) => {
+router.post("/:sensorId/measures", authenticate, requireScope("measures:write"), requireRoles("admin", "device"), requireSensorAccess, idempotency, (req, res) => {
   const sensor = req.sensor;
 
   if (sensor.status === "inactive") {

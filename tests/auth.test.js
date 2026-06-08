@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const net = require("net");
 const path = require("path");
 const { spawn } = require("child_process");
+const { randomUUID } = require("crypto");
 
 const JWT_SECRET = process.env.JWT_SECRET || "thermosense-secret-key-change-in-production";
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "thermosense-api";
@@ -318,7 +319,7 @@ async function run() {
 
     {
       const res = await request("PUT", "/actuators/actuator-1", {
-        headers: { Authorization: `Bearer ${operatorA.token}` },
+        headers: { Authorization: `Bearer ${operatorA.token}`, "Idempotency-Key": randomUUID() },
         body: { state: "off" },
       });
 
@@ -393,7 +394,7 @@ async function run() {
 
     {
       const res = await request("POST", "/sensors/sensor-1/measures", {
-        headers: { Authorization: `Bearer ${deviceSensor.token}` },
+        headers: { Authorization: `Bearer ${deviceSensor.token}`, "Idempotency-Key": randomUUID() },
         body: { timestamp: new Date().toISOString(), value: 21.4 },
       });
 
@@ -695,6 +696,83 @@ async function run() {
         [
           "Le middleware rejette la requete qui n'a pas de header Authorization.",
           "L'endpoint GET /areas est protege et ne doit pas etre accessible sans token.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    // ============================================================
+    // TEST 7 — Idempotence : POST mesure sans Idempotency-Key -> 422
+    // ============================================================
+    {
+      const res = await request("POST", "/sensors/sensor-1/measures", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}` },
+        body: { timestamp: new Date().toISOString(), value: 18.0 },
+      });
+
+      report(
+        "Test 7 — Idempotence : POST mesure sans Idempotency-Key",
+        "422:idempotencyKeyMissing",
+        `${res.status}:${res.body?.code}`,
+        [
+          "Le contrat declare Idempotency-Key comme requis sur les operations a effet de bord.",
+          "Sans ce header, le serveur doit refuser la requete avec 422 idempotencyKeyMissing.",
+          `Reponse : ${JSON.stringify(res.body)}`,
+        ].join("\n")
+        ,
+        res.request
+      );
+    }
+
+    // ============================================================
+    // TEST 8 — Idempotence : rejeu identique -> pas de doublon
+    // ============================================================
+    const sharedIdemKey = randomUUID();
+    const sharedMeasureBody = { timestamp: new Date().toISOString(), value: 23.7 };
+    {
+      const first = await request("POST", "/sensors/sensor-1/measures", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}`, "Idempotency-Key": sharedIdemKey },
+        body: sharedMeasureBody,
+      });
+      const second = await request("POST", "/sensors/sensor-1/measures", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}`, "Idempotency-Key": sharedIdemKey },
+        body: sharedMeasureBody,
+      });
+
+      const sameId = Boolean(first.body?.id) && first.body?.id === second.body?.id;
+      report(
+        "Test 8 — Idempotence : rejeu identique renvoie la meme ressource sans doublon",
+        "201:201:same",
+        `${first.status}:${second.status}:${sameId ? "same" : "different"}`,
+        [
+          "Un capteur IoT retente apres timeout avec la meme cle et le meme body.",
+          "Le serveur doit rejouer la reponse memorisee (meme id) sans creer de seconde mesure.",
+          `1re reponse : ${JSON.stringify(first.body)}`,
+          `2e reponse  : ${JSON.stringify(second.body)}`,
+        ].join("\n")
+        ,
+        second.request
+      );
+    }
+
+    // ============================================================
+    // TEST 9 — Idempotence : meme cle, body different -> 409
+    // ============================================================
+    {
+      const res = await request("POST", "/sensors/sensor-1/measures", {
+        headers: { Authorization: `Bearer ${deviceSensor.token}`, "Idempotency-Key": sharedIdemKey },
+        body: { timestamp: new Date().toISOString(), value: 99.9 },
+      });
+
+      report(
+        "Test 9 — Idempotence : meme cle reutilisee avec un body different",
+        "409:idempotencyConflict",
+        `${res.status}:${res.body?.code}`,
+        [
+          "Reutiliser une cle deja consommee avec un contenu different est un conflit.",
+          "Le serveur doit repondre 409 idempotencyConflict pour eviter toute ambiguite.",
           `Reponse : ${JSON.stringify(res.body)}`,
         ].join("\n")
         ,
